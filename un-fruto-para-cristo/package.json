@@ -1,0 +1,50 @@
+{
+  "name": "un-fruto-para-cristo",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@fullcalendar/daygrid": "^6.1.18",
+    "@fullcalendar/interaction": "^6.1.18",
+    "@fullcalendar/react": "^6.1.18",
+    "@prisma/client": "^6.7.0",
+    "@react-three/drei": "^9.56.5",
+    "@react-three/fiber": "^8.13.7",
+    "animate.css": "^4.1.1",
+    "axios": "^1.9.0",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "framer-motion": "^10.18.0",
+    "jwt-decode": "^4.0.0",
+    "konva": "^9.3.20",
+    "lucide-react": "^0.511.0",
+    "mongoose": "^8.14.2",
+    "react": "^18.0.0",
+    "react-big-calendar": "^1.19.4",
+    "react-dom": "^18.0.0",
+    "react-error-boundary": "^6.0.0",
+    "react-icons": "^5.5.0",
+    "react-konva": "^18.2.10",
+    "react-router-dom": "^7.6.0",
+    "sweetalert2": "^11.21.0",
+    "three": "^0.152.2",
+    "use-image": "^1.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "prisma": "^6.7.0",
+    "tailwindcss": "^3.4.17",
+    "vite": "^4.0.0"
+  }
+}

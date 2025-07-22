@@ -1,0 +1,61 @@
+----------------------------------       
+		 DATA IMPORTANTE
+----------------------------------
+SúperUsuario IUMP Concón:
+iumpadmin
+renatomaxi2005@gmail.com
+iglesiaunida1978
+
+User Profesor:
+MaxiProfe
+12345
+
+User Alumno:
+MaxiAlumno
+12345
+----------------------------------
+
+---------------------------------------------------------------------------------------------------------------------------
+                                                       Comandos 
+---------------------------------------------------------------------------------------------------------------------------
+FrontEnd: cd desktop
+		  cd Un Fruto para Cristo
+		  cd un-fruto-para-cristo
+		  npm run dev -- --host
+		  
+
+BackEnd: cd desktop
+		  cd Un Fruto para Cristo
+		  cd iump_backend
+		  python manage.py runserver 0.0.0.0:8000
+---------------------------------------------------------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------------------------------------------------------
+                                                       ¿QUÉ QUEDA? 
+---------------------------------------------------------------------------------------------------------------------------
+- Registro : Lograr el registro, agregar opcion de profesora o alumno. ✅
+
+- Resetear Constraseña: Lograr resteo a través de correo electrónico.
+
+- Base de Datos: Agregar tablas para lógica del árbol (Puntaje). 
+				 Agregar tabla asistencia. 
+
+- Pantalla árbol: Insertar arbol 3d a través de thee.js;  ✅
+				  Permitir que puedan dejar las manzanas sobre el árbol solamente. ✅
+				  Pop up informativo de el árbol. ✅
+				  Hacer logica de Obtención de la Manzana. 
+				  Al apretar una manzana salga un pop con la info de a quien pertenece esa manzana.
+
+- Pantalla de Perfil: Recibir datos de del usuario logeado y presentarlo de la mejor manera; Hacer los Avatars Finales. ✅
+					  
+- Pantalla Home: Agregar pantalla de ranking (alumnos con mas desafios completados, Alumno con mejor asistencia, alumnos con mas fruto, podio, etc).
+				 Cantidad de alumnos ingresados a la plataforma por clase.
+				 
+
+- Panel Control Profes: Panel de control de profesoras pueden pasar la lista de la clase.
+				        Panel de control debe listar los alumnos dependiendo de la clase del profesor. 
+						Panel de Control Dependiendo de si es profesor jefe puede agregar o eliminar cosas. 
+						Las profesoras puede agregar misiones y misiones especiales para los que asistieron ese dia a clase.
+						
+---------------------------------------------------------------------------------------------------------------------------

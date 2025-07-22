@@ -1,0 +1,65 @@
+================================ CLASE TRANSICIÓN NIÑOS(AS) ================================
+
+NOMBRE: Max Orellana
+RUT: 24.653.428-4
+EDAD: 11
+FECHA NACIMIENTO: 14/06/14
+APODERADO: Felipe Orellana
+MASCOTA: Valentín 
+TALLA 14
+
+NOMBRE: Esteban Riveros
+RUT: 25.493.439-9
+EDAD: 8 
+FECHA NACIMIENTO: 25/08/16
+APODERADO: Karen niño
+MASCOTA: Valentín 
+TALLA 12
+
+NOMBRE: Genesis Pavez 
+RUT: 24.789.734-8
+EDAD: 10
+FECHA NACIMIENTO: 02/11/14
+APODERADO: Marisol Padilla 
+MASCOTA: Valentín 
+TALLA 14
+
+NOMBRE: Ignacia Guerrero 
+RUT: 24.238.345-1
+EDAD: 12
+FECHA NACIMIENTO: 24/03/13
+APODERADO: Francis Mora 
+MASCOTA: Valentín 
+TALLA: 16 
+
+NOMBRE: Philippe Toula
+RUT: 24.835.116-0
+EDAD: 10
+FECHA NACIMIENTO: 25/12/14
+APODERADO: Carlos Toula
+MASCOTA: Valentín 
+TALLA 16
+
+NOMBRE: Pía Orellana 
+RUT: 25.434.072-3
+EDAD: 9
+FECHA NACIMIENTO: 06/07/16
+APODERADO: Felipe Orellana
+MASCOTA: Valentín 
+TALLA: 12
+
+NOMBRE: Amanda Fuentes
+RUT: 25.386.877-5
+EDAD: 9
+FECHA NACIMIENTO: 24/04/16
+APODERADO: Bianka Herrera
+MASCOTA: Valentín 
+TALLA: 12-14
+
+NOMBRE: Máximo Estay
+RUT: 25.006.117-k
+EDAD: 10
+FECHA NACIMIENTO: 05/06/15
+APODERADO: Joselyn López 
+MASCOTA: Valentín 
+TALLA: 14-16

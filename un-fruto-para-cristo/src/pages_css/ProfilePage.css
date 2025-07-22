@@ -1,0 +1,113 @@
+/* Estilos generales para el contenedor principal */
+.profile-background {
+  min-height: 100vh;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* Efecto de paralaje */
+  font-family: 'Poppins', sans-serif; /* Aplicar la fuente Poppins */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 6rem; /* pt-24 = 6rem = 96px */
+  padding-left: 2rem; /* p-8 = 2rem */
+  padding-right: 2rem; /* p-8 = 2rem */
+  padding-bottom: 2rem; /* p-8 = 2rem */
+}
+
+/* Fondo: Degradado de celeste a azul oscuro */
+.profile-background {
+  background: linear-gradient(135deg, #87CEEB, #000080); /* Sky Blue a Navy Blue */
+}
+
+/* Estilos para el título principal */
+.main-profile-title {
+  font-family: 'Poppins', sans-serif;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3); /* Sombra de texto más pronunciada */
+  color: #FFFFFF; /* Blanco */
+  -webkit-text-stroke: 1px #4682B4; /* Borde azul acerado para el texto */
+}
+
+/* Ajustes de tamaño de título para pantallas grandes */
+@media (min-width: 1024px) {
+  .main-profile-title {
+    font-size: 3.8rem; /* lg:text-5xl - un poco más grande */
+  }
+}
+
+/* Estilos para las tarjetas de sección */
+.profile-card {
+  background-color: rgba(255, 255, 255, 0.95); /* Fondo blanco con más opacidad */
+  border-radius: 1.5rem; /* rounded-2xl */
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); /* Sombra más grande y definida */
+  padding: 1.5rem; /* p-6 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Transición para transform y shadow */
+  border: 2px solid #6A5ACD; /* Azul pizarra medio vibrante */
+  margin-bottom: 2rem; /* Espacio entre tarjetas */
+}
+
+.profile-card:hover {
+  transform: translateY(-8px) scale(1.02); /* Efecto de elevación y ligero zoom más pronunciado */
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.3); /* Sombra más intensa al hover */
+}
+
+/* Estilos para los títulos de sección */
+.profile-section-title {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #191970; /* Azul medianoche */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estilos para los iconos dentro de las tarjetas de detalles */
+.detail-icon {
+  color: #4169E1; /* Azul real */
+}
+
+/* Estilos para el botón de Editar/Cerrar Sesión */
+.profile-button {
+  background: linear-gradient(45deg, #4682B4, #6A5ACD); /* Gradiente de azules */
+  color: white;
+  padding: 15px 35px;
+  border: none;
+  border-radius: 9999px; /* rounded-full */
+  box-shadow: 0 8px 20px rgba(70, 130, 180, 0.4); /* Sombra azul */
+  transition: all 0.3s ease;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 100%;
+  max-width: 300px; /* Ancho fijo para los botones */
+  margin-top: 1rem; /* Espacio entre botones */
+}
+
+.profile-button:hover {
+  background: linear-gradient(45deg, #6A5ACD, #4682B4); /* Gradiente invertido al hover */
+  transform: translateY(-5px) scale(1.05); /* Efecto de elevación y zoom */
+  box-shadow: 0 12px 25px rgba(70, 130, 180, 0.5);
+}
+
+.profile-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Animaciones para las secciones (copiado de HomePage) */
+.animated-section {
+  opacity: 0;
+  transform: translateY(50px); /* Comienza 50px más abajo */
+  transition: opacity 1s ease-out, transform 1s ease-out; /* Transición suave */
+}
+
+.animated-section.is-visible {
+  opacity: 1;
+  transform: translateY(0); /* Vuelve a su posición original */
+}
