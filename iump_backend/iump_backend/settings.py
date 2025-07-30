@@ -23,9 +23,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-a69**@i^7^&o06x+^@d=caz5r*$-!08bmw%-ni)d8w0%nan8()'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['proserit.ddns.net', 'www.proserit.ddns.net']
+
+
+# Forzar HTTPS en todas las vistas
+SECURE_SSL_REDIRECT = True
+
+# Cookies seguras
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# HSTS (solo si tienes HTTPS funcionando correctamente)
+SECURE_HSTS_SECONDS = 3600
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
 
 # Application definition
@@ -59,23 +72,12 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://192.168.1.57:5173',
-    'http://172.20.10.3:5173', 
+    'https://proserit.ddns.net',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
-    'http://192.168.1.57:5173',  
-    'http://172.20.10.3:5173',  
+    'https://proserit.ddns.net',
 ]
-
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-}
 
 
 ROOT_URLCONF = 'iump_backend.urls'
@@ -154,9 +156,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-AUTH_USER_MODEL = 'api_unfrutoparacristo.Usuario'
-
 
 AUTH_USER_MODEL = 'api_unfrutoparacristo.Usuario'
 
