@@ -322,19 +322,24 @@ class Noticia(models.Model):
     Modelo para las noticias o anuncios generales de la comunidad.
     """
     noticia_id = models.AutoField(primary_key=True)
+    
+    noticia_clase = models.ForeignKey(
+        Clase, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        verbose_name="Clase Específica (Opcional)",
+        help_text="Dejar en blanco si la noticia es para todas las clases."
+    )
+    
     noticia_titulo = models.CharField(max_length=200, verbose_name="Título")
     noticia_contenido = models.TextField(verbose_name="Contenido")
-    
-    # --- CAMBIO AQUÍ ---
-    # Cambiamos URLField por ImageField.
-    # 'upload_to' crea una carpeta 'noticias' dentro de tu carpeta de media.
     noticia_imagen = models.ImageField(
         upload_to='noticias/', 
         blank=True, 
         null=True, 
         verbose_name="Imagen de la Noticia (Opcional)"
     )
-    
     noticia_fecha_publicacion = models.DateTimeField(default=timezone.now, verbose_name="Fecha de Publicación")
     noticia_publicada = models.BooleanField(default=True, verbose_name="¿Está publicada?")
 

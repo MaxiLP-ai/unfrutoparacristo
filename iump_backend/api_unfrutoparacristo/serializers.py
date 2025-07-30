@@ -733,7 +733,7 @@ class ServicioAsistenciaSerializer(serializers.ModelSerializer):
 class NoticiaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Noticia
-        fields = ['noticia_id', 'noticia_titulo', 'noticia_contenido', 'noticia_imagen', 'noticia_fecha_publicacion']
+        fields = ['noticia_id', 'noticia_titulo', 'noticia_contenido', 'noticia_imagen', 'noticia_fecha_publicacion', 'noticia_clase']
 
 class DesafioClaseSerializer(serializers.ModelSerializer):
     class Meta:

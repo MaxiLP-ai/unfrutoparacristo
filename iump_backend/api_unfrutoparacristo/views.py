@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView 
 from django.utils import timezone
 from .utils import formatear_rut
+from django.db.models import Q
 from .models import (
     Usuario, Clase, Cesta, Fruto, FrutoColocado, Asistencia, Servicio, 
     FrutoAsignado, DesafioClase, Noticia, TipoServicio
@@ -219,8 +220,13 @@ class HomePageDataView(APIView):
         }
 
         # 2. Últimas Noticias
-        # Obtiene las 8 noticias más recientes que estén marcadas como publicadas.
-        noticias = Noticia.objects.filter(noticia_publicada=True)[:8]
+        # --- 2. LÓGICA DE FILTRADO DE NOTICIAS CORREGIDA ---
+        clase_del_usuario = usuario.usuario_clase_actual
+        
+        noticias = Noticia.objects.filter(
+            Q(noticia_clase__isnull=True) | Q(noticia_clase=clase_del_usuario),
+            noticia_publicada=True
+        ).distinct().order_by('-noticia_fecha_publicacion')[:8] # Usamos distinct() y ordenamos
 
         # 3. Desafío de la Clase
         # Busca el desafío específico para la clase del usuario actual.

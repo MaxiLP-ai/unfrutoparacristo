@@ -172,36 +172,33 @@ class FrutoColocadoAdmin(admin.ModelAdmin):
 @admin.register(Noticia)
 class NoticiaAdmin(admin.ModelAdmin):
     """
-    Configuración personalizada para el modelo Noticia en el panel de administración de Django.
+    Configuración para el modelo Noticia en el panel de admin.
     """
+    # --- CAMBIOS AQUÍ ---
+    # Añadimos 'noticia_clase' para que se vea en la lista
+    list_display = ('noticia_titulo', 'noticia_clase', 'noticia_fecha_publicacion', 'noticia_publicada')
+    # Añadimos el filtro por clase
+    list_filter = ('noticia_publicada', 'noticia_clase', 'noticia_fecha_publicacion')
     
-    # Campos que se mostrarán en la lista de noticias
-    list_display = ('noticia_titulo', 'noticia_fecha_publicacion', 'noticia_publicada')
-    
-    # Filtros que aparecerán en la barra lateral derecha
-    list_filter = ('noticia_publicada', 'noticia_fecha_publicacion')
-    
-    # Campos por los que se podrá buscar
     search_fields = ('noticia_titulo', 'noticia_contenido')
-    
-    # Añade una jerarquía de navegación por fechas debajo de la barra de búsqueda
     date_hierarchy = 'noticia_fecha_publicacion'
     
-    # Define el orden y la disposición de los campos en el formulario de edición
-    fields = ('noticia_titulo', 'noticia_contenido', 'noticia_imagen', 'noticia_publicada')
+    # Añadimos el nuevo campo al formulario de edición
+    fields = ('noticia_titulo', 'noticia_contenido', 'noticia_imagen', 'noticia_clase', 'noticia_publicada')
     
-    # Permite activar o desactivar noticias en masa desde la lista
+    # Esto crea un campo de búsqueda para seleccionar la clase, muy útil si tienes muchas.
+    autocomplete_fields = ['noticia_clase']
+    
     actions = ['marcar_como_publicada', 'marcar_como_no_publicada']
 
     def marcar_como_publicada(self, request, queryset):
-        """Acción para publicar las noticias seleccionadas."""
         queryset.update(noticia_publicada=True)
     marcar_como_publicada.short_description = "Publicar noticias seleccionadas"
 
-    def marcar_como_no_publicada(self, request, queryset):
-        """Acción para despublicar las noticias seleccionadas."""
+    def desactivar_desafios(self, request, queryset):
         queryset.update(noticia_publicada=False)
-    marcar_como_no_publicada.short_description = "Ocultar noticias seleccionadas"
+    desactivar_desafios.short_description = "Ocultar noticias seleccionadas"
+
 
 
 @admin.register(DesafioClase)
