@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPassword from './pages/ResetPassword';
+import ResetPasswordConfirmPage from './pages/ResetPasswordConfirmPage'; 
 import ProfilePage from './pages/ProfilePage';
 import TreePage from './pages/TreePage';
 import ControlPanelPage from './pages/ControlPanel';
@@ -122,6 +123,7 @@ function App() {
         <Route path="/" element={user ? <Navigate to={getRedirectPath()} /> : <LoginPage setUser={handleSetUser} />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-password/:token/" element={<ResetPasswordConfirmPage />} />
         
         <Route
           path="/home"

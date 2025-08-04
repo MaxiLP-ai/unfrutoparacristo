@@ -46,7 +46,7 @@ const PET_DATA = {
   '2': { // Corresponde a 'Valientes de David'
     name: 'Leo',
     clase: 'Valientes de David',
-    modelPath: '/models/Leo.glb',
+    modelPath: '/models/leo.glb',
     initialScale: 1.0,
     initialPosition: [0, 0, 0],
   },

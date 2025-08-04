@@ -1,30 +1,38 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, BookOpen, Bell, PlusCircle, List, BarChart, Settings, Shield, Eye, Gift, Hammer, CalendarPlus, ListCheck } from 'lucide-react';
+import { Users, BookOpen, Bell, Newspaper, Loader, PlusCircle, Save, List, BarChart, Settings, Shield, Eye, Gift, Hammer, CalendarPlus, ListCheck } from 'lucide-react';
 import Swal from 'sweetalert2';
 import ServicioActual from "../components/ServicioActual";
 import ModalAsistencia from "../components/ModalAsistencia";
 import CalendarioServicios from "../components/CalendarioServicios";
 
+
+
 // --- MODAL PARA AÑADIR SERVICIO ---
 const AddServicioModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest }) => {
   const [tiposServicio, setTiposServicio] = useState([]);
+  const [profesores, setProfesores] = useState([]);
   const formRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      const fetchTipos = async () => {
+      const fetchData = async () => {
         try {
-          // CORRECCIÓN: Se quita /api/ del inicio
-          const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/tipos-servicio/`); 
-          if (!response.ok) throw new Error('No se pudieron cargar los tipos de servicio.');
-          const data = await response.json();
-          setTiposServicio(data);
+          const tiposRes = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/tipos-servicio/`);
+          const profesoresRes = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/profesores-de-mi-clase/`);
+
+          if (!tiposRes.ok || !profesoresRes.ok) throw new Error('Fallo al cargar datos.');
+
+          const tiposData = await tiposRes.json();
+          const profesoresData = await profesoresRes.json();
+
+          setTiposServicio(tiposData);
+          setProfesores(profesoresData);
         } catch (error) {
-          console.error("Error cargando tipos de servicio", error);
+          console.error("Error cargando datos:", error);
         }
       };
-      fetchTipos();
+      fetchData();
     }
   }, [isOpen, makeAuthenticatedRequest]);
 
@@ -44,10 +52,23 @@ const AddServicioModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest })
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <select name="servicio_tiposervicio" className="w-full p-2 border rounded" required>
             <option value="">Seleccione un tipo de servicio</option>
-            {tiposServicio.map(tipo => <option key={tipo.Tipo_ServicioId} value={tipo.Tipo_ServicioId}>{tipo.Tipo_ServicioDescripcion}</option>)}
+            {tiposServicio.map(tipo => (
+              <option key={tipo.Tipo_ServicioId} value={tipo.Tipo_ServicioId}>
+                {tipo.Tipo_ServicioDescripcion}
+              </option>
+            ))}
           </select>
+
           <input name="servicio_descripcion" placeholder="Descripción del servicio" className="w-full p-2 border rounded" required />
           <input name="servicio_fecha_hora" type="datetime-local" className="w-full p-2 border rounded" required />
+
+          <select name="servicio_profesor_encargado" className="w-full p-2 border rounded">
+            <option value="">Sin profesor encargado</option>
+            {profesores.map(prof => (
+              <option key={prof.id} value={prof.id}>{prof.nombre}</option>
+            ))}
+          </select>
+
           <div className="flex justify-end gap-4 pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button>
             <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">Guardar Servicio</button>
@@ -58,24 +79,33 @@ const AddServicioModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest })
   );
 };
 
+
 // --- MODAL PARA AÑADIR DESAFÍO ---
 const AddDesafioModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest }) => {
-    const [frutos, setFrutos] = useState([]);
     const formRef = useRef(null);
+    const [existingData, setExistingData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (isOpen) {
-            const fetchFrutos = async () => {
+            setIsLoading(true);
+            const fetchCurrentDesafio = async () => {
                 try {
-                    const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/frutos/`);
-                    if (!response.ok) throw new Error('No se pudieron cargar los frutos.');
-                    const data = await response.json();
-                    setFrutos(data);
+                    const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/gestionar-desafio-clase/`); 
+                    if (response.ok) {
+                        const data = await response.json();
+                        setExistingData(data);
+                    } else {
+                        setExistingData(null);
+                    }
                 } catch (error) {
-                    console.error("Error cargando frutos", error);
+                    console.error("No se encontró un desafío existente, se creará uno nuevo.", error);
+                    setExistingData(null);
+                } finally {
+                    setIsLoading(false);
                 }
             };
-            fetchFrutos();
+            fetchCurrentDesafio();
         }
     }, [isOpen, makeAuthenticatedRequest]);
 
@@ -85,9 +115,9 @@ const AddDesafioModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest }) 
         e.preventDefault();
         const formData = new FormData(formRef.current);
         const data = {
-            desafio_descripcion: formData.get('desafio_descripcion'),
-            desafio_fruto_asociado: formData.get('desafio_fruto_asociado') || null,
-            desafio_asignacionAutomatica: formData.get('desafio_asignacionAutomatica') === 'on',
+            desafio_titulo: formData.get('desafio_titulo'),
+            desafio_video_url: formData.get('desafio_video_url'),
+            desafio_activo: formData.get('desafio_activo') === 'on',
         };
         onSave(data);
     };
@@ -95,26 +125,155 @@ const AddDesafioModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest }) 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8">
-                <h2 className="text-2xl font-bold mb-4">Añadir Nuevo Desafío</h2>
-                <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-                    <textarea name="desafio_descripcion" placeholder="Descripción del desafío" className="w-full p-2 border rounded" required />
-                    <select name="desafio_fruto_asociado" className="w-full p-2 border rounded">
-                        <option value="">Sin fruto asociado</option>
-                        {frutos.map(f => <option key={f.fruto_id} value={f.fruto_id}>{f.fruto_nombre}</option>)}
-                    </select>
-                    <label className="flex items-center gap-2">
-                        <input type="checkbox" name="desafio_asignacionAutomatica" />
-                        Asignación Automática
-                    </label>
-                    <div className="flex justify-end gap-4 pt-4">
-                        <button type="button" onClick={onClose} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button>
-                        <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded-lg">Guardar Desafío</button>
-                    </div>
-                </form>
+                <h2 className="text-2xl font-bold mb-4">Gestionar Desafío de la Clase</h2>
+                {isLoading ? <p>Cargando información...</p> : (
+                    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+                        <input name="desafio_titulo" defaultValue={existingData?.desafio_titulo} placeholder="Título del Desafío" className="w-full p-2 border rounded" required />
+                        <input name="desafio_video_url" defaultValue={existingData?.desafio_video_url} placeholder="URL del Video de YouTube (embed)" className="w-full p-2 border rounded" required />
+                        <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
+                            <input type="checkbox" name="desafio_activo" defaultChecked={existingData?.desafio_activo} className="h-5 w-5 rounded text-blue-600 focus:ring-blue-500" />
+                            <span className="font-medium">¿Activar y mostrar en la página de inicio?</span>
+                        </label>
+                        <div className="flex justify-end gap-4 pt-4">
+                            <button type="button" onClick={onClose} className="bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button>
+                            <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded-lg">Guardar Desafío</button>
+                        </div>
+                    </form>
+                )}
             </div>
         </div>
     );
 };
+
+// --- MODAL PARA GESTIONAR NOTICIAS ---
+const GestionNoticiasModal = ({ isOpen, onClose, makeAuthenticatedRequest }) => {
+    const [noticias, setNoticias] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const fetchNoticias = useCallback(async () => {
+        if (!isOpen) return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/gestionar-noticias/`);
+            if (!response.ok) throw new Error('No se pudieron cargar las noticias.');
+            const data = await response.json();
+            setNoticias(data);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [isOpen, makeAuthenticatedRequest]);
+
+    useEffect(() => {
+        fetchNoticias();
+    }, [fetchNoticias]);
+
+    const handleUpdate = (id, updatedFields) => {
+        setNoticias(prev => prev.map(n => n.noticia_id === id ? { ...n, ...updatedFields } : n));
+    };
+
+    const handleAddNew = () => {
+        // Añade una nueva noticia en blanco al principio de la lista para ser editada
+        const newNoticia = {
+            noticia_id: `new-${Date.now()}`, // ID temporal para la key de React
+            noticia_titulo: '',
+            noticia_contenido: '',
+            noticia_publicada: true,
+            isNew: true, // Bandera para identificarla como nueva
+        };
+        setNoticias(prev => [newNoticia, ...prev]);
+    };
+
+    const handleSaveChanges = async () => {
+        const toCreate = noticias.filter(n => n.isNew);
+        const toUpdate = noticias.filter(n => !n.isNew);
+
+        try {
+            const createPromises = toCreate.map(noticia => {
+                const { noticia_id, isNew, ...dataToSend } = noticia; // Excluir campos del frontend
+                return makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/crear-noticia/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dataToSend),
+                });
+            });
+
+            const updatePromise = makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/gestionar-noticias/`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(toUpdate),
+            });
+
+            await Promise.all([...createPromises, updatePromise]);
+
+            Swal.fire('¡Guardado!', 'Las noticias han sido actualizadas.', 'success');
+            onClose();
+        } catch (err) {
+            Swal.fire('Error', 'No se pudieron guardar todos los cambios.', 'error');
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold">Gestionar Noticias</h2>
+                    <button onClick={handleAddNew} className="flex items-center gap-2 bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-600">
+                        <PlusCircle size={18} /> Crear Nueva
+                    </button>
+                </div>
+                <div className="flex-grow overflow-y-auto pr-4 space-y-4 max-h-[60vh]">
+                    {isLoading && <div className="flex justify-center p-8"><Loader className="animate-spin h-8 w-8 text-blue-600" /></div>}
+                    {error && <p className="text-red-500 text-center">{error}</p>}
+                    {!isLoading && !error && noticias.length > 0 ? (
+                        noticias.map(noticia => (
+                            <div key={noticia.noticia_id} className="bg-gray-50 p-4 rounded-lg border">
+                                <input
+                                    type="text"
+                                    value={noticia.noticia_titulo}
+                                    onChange={(e) => handleUpdate(noticia.noticia_id, { noticia_titulo: e.target.value })}
+                                    className="w-full p-2 border rounded font-bold text-lg mb-2"
+                                    placeholder="Título de la noticia"
+                                />
+                                <textarea
+                                    value={noticia.noticia_contenido}
+                                    onChange={(e) => handleUpdate(noticia.noticia_id, { noticia_contenido: e.target.value })}
+                                    className="w-full p-2 border rounded h-24"
+                                    placeholder="Contenido de la noticia..."
+                                />
+                                <div className="flex items-center justify-end gap-3 pt-2 mt-2">
+                                    <label htmlFor={`pub-${noticia.noticia_id}`} className="font-medium">Visible:</label>
+                                    <input
+                                        type="checkbox"
+                                        id={`pub-${noticia.noticia_id}`}
+                                        checked={noticia.noticia_publicada}
+                                        onChange={(e) => handleUpdate(noticia.noticia_id, { noticia_publicada: e.target.checked })}
+                                        className="h-5 w-5"
+                                    />
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        !isLoading && <p className="text-center text-gray-500 py-8">No hay noticias para esta clase. ¡Crea la primera!</p>
+                    )}
+                </div>
+                <div className="flex justify-end gap-4 pt-4 mt-4 border-t">
+                    <button type="button" onClick={onClose} className="bg-gray-200 px-4 py-2 rounded-lg">Cerrar</button>
+                    <button type="button" onClick={handleSaveChanges} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <Save size={18} /> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 
 // --- MODAL PARA ASIGNAR FRUTO ---
 const AsignarFrutoModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest }) => {
@@ -176,7 +335,6 @@ const AsignarFrutoModal = ({ isOpen, onClose, onSave, makeAuthenticatedRequest }
     );
 };
 
-
 // --- Componentes de la página principal ---
 const StatCard = ({ icon, title, value, color, delay }) => (
   <div className={`bg-white p-6 rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center space-x-4 animate__animated animate__zoomIn animate__delay-${delay}s`}>
@@ -218,6 +376,8 @@ export default function ControlPanel({ makeAuthenticatedRequest }) {
       desafio: false,
       fruto: false,
   });
+
+  
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -309,12 +469,13 @@ export default function ControlPanel({ makeAuthenticatedRequest }) {
             <QuickActionButton isVisible={true} icon={<List />} text="Ver Alumnos" color="blue" delay="0.1" onClick={() => navigate('/alumnos')} />
             <QuickActionButton isVisible={true} icon={<BarChart />} text="Ver Progreso" color="blue" delay="0.2" onClick={() => Swal.fire('En desarrollo')} />
             <QuickActionButton isVisible={true} icon={<ListCheck />} text="Tomar Asistencia" color="blue" delay="0.3" onClick={() => handleOpenModal('asistencia')} />
-            {isHeadTeacher && <QuickActionButton icon={<Settings />} text="Configurar Clase" color="gray" delay="0.3" onClick={() => Swal.fire('En desarrollo')} isVisible={true} />}
-            {isHeadTeacher && <QuickActionButton icon={<CalendarPlus />} text="Añadir Servicio" color="green" delay="0" onClick={() => handleOpenModal('servicio')} isVisible={true} />}
-            {isHeadTeacher && <QuickActionButton icon={<Hammer />} text="Añadir Desafío" color="orange" delay="0" onClick={() => handleOpenModal('desafio')} isVisible={true} />}
-            {isHeadTeacher && <QuickActionButton icon={<Gift />} text="Asignar Fruto" color="purple" delay="0" onClick={() => handleOpenModal('fruto')} isVisible={true} />}
+            {isHeadTeacher && <QuickActionButton icon={<Settings />} text="Configurar Clase" color="blue" delay="0.3" onClick={() => Swal.fire('En desarrollo')} isVisible={true} />}
+            {isHeadTeacher && <QuickActionButton icon={<CalendarPlus />} text="Añadir Servicio" color="blue" delay="0" onClick={() => handleOpenModal('servicio')} isVisible={true} />}
+            {isHeadTeacher && <QuickActionButton icon={<Hammer />} text="Añadir Desafío" color="blue" delay="0" onClick={() => handleOpenModal('desafio')} isVisible={true} />}
+            {isHeadTeacher && <QuickActionButton icon={<Gift />} text="Asignar Fruto" color="blue" delay="0" onClick={() => handleOpenModal('fruto')} isVisible={true} />}
+            {isHeadTeacher && <QuickActionButton icon={<Newspaper />} text="Gestionar Noticias" color="blue" delay="0" onClick={() => handleOpenModal('noticia')} isVisible={true} />}
           </div>
-        </section>
+        </section> 
 
         <ServicioActual servicio={servicioActual} />
         <CalendarioServicios makeAuthenticatedRequest={makeAuthenticatedRequest} />
@@ -342,7 +503,8 @@ export default function ControlPanel({ makeAuthenticatedRequest }) {
       {/* Renderizado de los modales */}
       <ModalAsistencia isOpen={modalState.asistencia} onClose={() => handleCloseModal('asistencia')} makeAuthenticatedRequest={makeAuthenticatedRequest} />
       <AddServicioModal isOpen={modalState.servicio} onClose={() => handleCloseModal('servicio')} onSave={(data) => handleSave(`${import.meta.env.VITE_API_URL}/crear-servicio/`, data, 'servicio', 'Servicio creado con éxito')} makeAuthenticatedRequest={makeAuthenticatedRequest} />
-      <AddDesafioModal isOpen={modalState.desafio} onClose={() => handleCloseModal('desafio')} onSave={(data) => handleSave(`${import.meta.env.VITE_API_URL}/crear-desafio/`, data, 'desafio', 'Desafío creado con éxito')} makeAuthenticatedRequest={makeAuthenticatedRequest} />
+      <AddDesafioModal isOpen={modalState.desafio} onClose={() => handleCloseModal('desafio')} onSave={(data) => handleSave(`${import.meta.env.VITE_API_URL}/gestionar-desafio-clase/`, data, 'desafio', 'Desafío actualizado con éxito')} makeAuthenticatedRequest={makeAuthenticatedRequest} />
+      <GestionNoticiasModal isOpen={modalState.noticia} onClose={() => handleCloseModal('noticia')} makeAuthenticatedRequest={makeAuthenticatedRequest} />
       <AsignarFrutoModal isOpen={modalState.fruto} onClose={() => handleCloseModal('fruto')} onSave={(data) => handleSave(`${import.meta.env.VITE_API_URL}/asignar-fruto/`, data, 'fruto', 'Fruto asignado con éxito')} makeAuthenticatedRequest={makeAuthenticatedRequest} />
     </div>
   );

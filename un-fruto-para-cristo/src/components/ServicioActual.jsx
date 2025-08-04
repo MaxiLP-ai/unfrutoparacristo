@@ -23,12 +23,14 @@ export default function ServicioActual({ servicio }) {
         <span className="font-semibold text-gray-900">Fecha y hora:</span>{' '}
         {new Date(servicio.servicio_fecha_hora).toLocaleString()}
       </p>
-      {servicio.servicio_profesor_encargado && (
+      {servicio.profesor_encargado && (
         <p className="text-lg text-gray-700 flex items-center gap-2 mt-2">
           <User className="text-green-500" size={20} />
-          Profesor Encargado: <span className="font-semibold">{servicio.servicio_profesor_encargado}</span>
+          Profesor Encargado: <span className="font-semibold">{servicio.profesor_encargado}</span>
         </p>
       )}
+
+
     </div>
   );
 }

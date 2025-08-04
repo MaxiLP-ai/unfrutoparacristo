@@ -10,6 +10,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.utils import timezone
 from .utils import formatear_rut
 from django.db.models import Q
+from django.core.mail import send_mail
+from rest_framework.decorators import api_view
+from django.utils.crypto import get_random_string
+from django.conf import settings
+from django.urls import reverse
+from rest_framework.decorators import permission_classes
+import datetime
 from .models import (
     Usuario, Clase, Cesta, Fruto, FrutoColocado, Asistencia, Servicio, 
     FrutoAsignado, DesafioClase, Noticia, TipoServicio
@@ -38,8 +45,71 @@ from .serializers import (
     CrearDesafioSerializer,
     AsignarFrutoSerializer,
     TipoServicioSerializer,
-    FrutoSerializer
+    DesafioClaseSerializer,
+    FrutoSerializer,
+    GestionNoticiaSerializer,
+    CrearNoticiaSerializer
 )
+
+# ===================================================================
+# VISTAS DE RESETEO DE PASSWORD
+# ===================================================================
+
+# Aquí guardamos tokens en memoria temporal por simplicidad (idealmente usar modelo o cache)
+TOKENS = {}
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def enviar_reset(request):
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Email requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = Usuario.objects.get(usuario_email=email)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'No se encontró un usuario con ese email'}, status=status.HTTP_404_NOT_FOUND)
+
+    token = get_random_string(32)
+    TOKENS[token] = {'user_id': user.id, 'expires': datetime.datetime.now() + datetime.timedelta(hours=1)}
+
+    reset_link = f"{settings.FRONTEND_URL}/reset-password/{token}"
+
+    send_mail(
+        'Restablecer contraseña',
+        f'Hola {user.username}, haz clic aquí para restablecer tu contraseña:\n{reset_link}',
+        settings.EMAIL_HOST_USER,
+        [email],
+        fail_silently=False,
+    )
+
+    return Response({'message': 'Correo de restablecimiento enviado.'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def confirmar_reset(request):
+    token = request.data.get('token')
+    nueva_password = request.data.get('password')
+
+    if not token or not nueva_password:
+        return Response({'error': 'Token y nueva contraseña son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    info = TOKENS.get(token)
+    if not info or info['expires'] < datetime.datetime.now():
+        return Response({'error': 'Token inválido o expirado'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = Usuario.objects.get(id=info['user_id'])
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user.set_password(nueva_password)
+    user.save()
+
+    del TOKENS[token]
+
+    return Response({'message': 'Contraseña actualizada exitosamente'})
 
 # ===================================================================
 # VISTAS DE AUTENTICACIÓN Y REGISTRO
@@ -321,15 +391,118 @@ class CrearServicioView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class CrearDesafioView(APIView):
+class DesafioClaseActualView(APIView):
+    """
+    NUEVA VISTA: Devuelve el desafío de clase actual para el profesor logueado.
+    Permite al modal de React pre-rellenar los campos si ya existe un desafío.
+    """
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        usuario = request.user
+        if not usuario.usuario_clase_actual:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            desafio = DesafioClase.objects.get(desafio_clase=usuario.usuario_clase_actual)
+            serializer = DesafioClaseSerializer(desafio) # Asume que tienes este serializer
+            return Response(serializer.data)
+        except DesafioClase.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+class CrearDesafioView(APIView):
+    """
+    Permite a un profesor jefe obtener, crear o actualizar el Desafío de su Clase.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Devuelve el desafío de la clase actual para pre-rellenar el formulario."""
+        usuario = request.user
+        if not usuario.usuario_clase_actual:
+            return Response({"detail": "Profesor no tiene clase asignada."}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            desafio = DesafioClase.objects.get(desafio_clase=usuario.usuario_clase_actual)
+            serializer = CrearDesafioSerializer(desafio)
+            return Response(serializer.data)
+        except DesafioClase.DoesNotExist:
+            return Response({"detail": "No existe un desafío para esta clase aún."}, status=status.HTTP_404_NOT_FOUND)
+
     def post(self, request):
-        serializer = CrearDesafioSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
+        """Crea o actualiza el desafío de la clase."""
+        usuario = request.user
+        clase = usuario.usuario_clase_actual
+
+        if not clase:
+            return Response({"detail": "El profesor no tiene una clase asignada."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Usamos update_or_create para manejar ambos casos (crear y actualizar) de forma atómica.
+        desafio, created = DesafioClase.objects.update_or_create(
+            desafio_clase=clase,
+            defaults=request.data
+        )
+        
+        serializer = CrearDesafioSerializer(desafio)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
+class CrearNoticiaView(APIView):
+    """
+    Permite a un profesor jefe o superadmin crear una nueva noticia para su clase.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = CrearNoticiaSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            # Asigna automáticamente la clase del profesor que está creando la noticia
+            serializer.save(noticia_clase=request.user.usuario_clase_actual)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GestionNoticiasView(APIView):
+    """
+    Permite a un profesor obtener y actualizar las noticias de su clase.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        usuario = request.user
+        clase_profesor = usuario.usuario_clase_actual
+
+        if not clase_profesor:
+            return Response({"error": "Este usuario no tiene una clase asignada."}, status=status.HTTP_400_BAD_REQUEST)
+
+        noticias = Noticia.objects.filter(noticia_clase=clase_profesor).order_by('-noticia_fecha_publicacion')
+        serializer = GestionNoticiaSerializer(noticias, many=True)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        noticias_data = request.data
+        if not isinstance(noticias_data, list):
+            return Response({"error": "Se esperaba una lista de noticias."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                for noticia_data in noticias_data:
+                    noticia_id = noticia_data.get('noticia_id')
+                    if not noticia_id:
+                        continue
+
+                    noticia_obj = Noticia.objects.get(pk=noticia_id)
+                    serializer = GestionNoticiaSerializer(noticia_obj, data=noticia_data, partial=True)
+                    if serializer.is_valid(raise_exception=True):
+                        serializer.save()
+
+        except Noticia.DoesNotExist:
+            return Response({"error": "Una de las noticias no fue encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"detail": "Noticias actualizadas correctamente."}, status=status.HTTP_200_OK)
 
 class AsignarFrutoView(APIView):
     permission_classes = [IsAuthenticated]
@@ -338,19 +511,41 @@ class AsignarFrutoView(APIView):
         serializer = AsignarFrutoSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
+            profesor = request.user
+            
+            # --- LÓGICA DE VALIDACIÓN AÑADIDA ---
+            
+            # 1. Nos aseguramos de que el profesor tenga una clase asignada.
+            if not profesor.usuario_clase_actual:
+                return Response(
+                    {"detail": "No tienes una clase asignada para realizar esta acción."}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # 2. Obtenemos el alumno al que se le quiere asignar el fruto.
             alumno = Usuario.objects.get(id=data['alumno_id'])
+
+            # 3. ¡La comprobación clave! Verificamos si la clase del alumno es la misma que la del profesor.
+            if alumno.usuario_clase_actual != profesor.usuario_clase_actual:
+                return Response(
+                    {"detail": "No puedes asignar frutos a un alumno que no pertenece a tu clase."}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # --- FIN DE LA LÓGICA DE VALIDACIÓN ---
+
             fruto = Fruto.objects.get(fruto_id=data['fruto_id'])
             
-            # Crear la asignación
+            # Si todas las validaciones pasan, se crea la asignación.
             FrutoAsignado.objects.create(
                 frutoasignado_usuario=alumno,
                 frutoasignado_fruto=fruto,
                 frutoasignado_motivo=data['motivo'],
-                frutoasignado_origen='Manual' # Origen manual desde el panel
+                frutoasignado_origen='Manual'
             )
             return Response({"detail": "Fruto asignado correctamente."}, status=status.HTTP_200_OK)
+            
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     
 # ===================================================================
 # VISTAS PARA LA GESTIÓN DE ALUMNOS (CRUD)
@@ -367,32 +562,38 @@ class GestionAlumnosListView(APIView):
         usuario = request.user
         alumnos = []
         es_jefe = False
+        clase_del_profesor = usuario.usuario_clase_actual
 
-        # Caso 1: El usuario es un superadmin
+        # --- LÓGICA CORREGIDA ---
+        # Ahora, la vista SIEMPRE filtra por la clase del usuario,
+        # sin importar si es superadmin o profesor.
+
+        if not clase_del_profesor:
+            # Si el usuario no tiene una clase asignada, no puede ver alumnos.
+            return Response({
+                "perfil_profesor": {"rol": usuario.usuario_rol, "es_jefe": False, "clase_info": None},
+                "alumnos": []
+            })
+
+        # Filtra los alumnos que pertenecen a la clase del usuario logueado.
+        alumnos = Usuario.objects.filter(
+            usuario_rol='alumno', 
+            usuario_clase_actual=clase_del_profesor
+        )
+
+        # La lógica para determinar si es "jefe" se mantiene.
         if usuario.is_superuser:
-            alumnos = Usuario.objects.filter(usuario_rol='alumno')
-            es_jefe = True # El superadmin tiene todos los permisos
-
-        # Caso 2: El usuario es un profesor o profesor_jefe
-        elif usuario.usuario_rol in ['profesor', 'profesor_jefe']:
-            # Se verifica que el profesor tenga una clase asignada
-            if hasattr(usuario, 'usuario_clase_actual') and usuario.usuario_clase_actual is not None:
-                clase_del_profesor = usuario.usuario_clase_actual
-
-                # Se verifica si el profesor es el jefe de esa clase
-                if hasattr(usuario, 'perfil_profesor'):
-                    if clase_del_profesor.clase_profesor_jefe == usuario.perfil_profesor:
-                        es_jefe = True
-                
-                # Se obtienen los alumnos de esa clase
-                alumnos = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase_del_profesor)
-
-        # Se prepara la respuesta
+            es_jefe = True
+        elif hasattr(usuario, 'perfil_profesor'):
+            if clase_del_profesor.clase_profesor_jefe == usuario.perfil_profesor:
+                es_jefe = True
+        
+        # Se prepara la respuesta con los datos ya filtrados
         data = {
             "perfil_profesor": {
                 "rol": usuario.usuario_rol,
                 "es_jefe": es_jefe,
-                "clase_info": ClaseSerializer(usuario.usuario_clase_actual).data if usuario.usuario_clase_actual else None
+                "clase_info": ClaseSerializer(clase_del_profesor).data
             },
             "alumnos": UsuarioSerializerProfeAdmin(alumnos, many=True).data
         }
@@ -764,9 +965,23 @@ class ClaseListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     
-class ServicioListAPIView(generics.ListAPIView):
-    queryset = Servicio.objects.all().order_by('servicio_fecha_hora')
-    serializer_class = ServicioSerializer
+class ServicioListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        usuario = request.user
+        clase = usuario.usuario_clase_actual
+
+        if not clase:
+            return Response([], status=status.HTTP_200_OK)
+
+        servicios = Servicio.objects.filter(
+            servicio_clase=clase
+        ).order_by('servicio_fecha_hora')
+
+        serializer = ServicioSerializer(servicios, many=True)
+        return Response(serializer.data)
+
 
 
 class ServiciosDisponiblesListView(APIView):
@@ -791,3 +1006,24 @@ class ServiciosDisponiblesListView(APIView):
         # Necesitarás un serializer simple para Servicio
         serializer = ServicioAsistenciaSerializer(servicios, many=True) 
         return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profesores_de_mi_clase(request):
+    user = request.user
+    clase = user.usuario_clase_actual  # Asegúrate que este campo exista
+    if not clase:
+        return Response([], status=200)
+    
+    profesores = Usuario.objects.filter(
+        usuario_clase_actual=clase,
+        usuario_rol__in=['profesor', 'profesor_jefe', 'profesor_asistente']
+    )
+
+    data = [{
+        'id': prof.id,
+        'nombre': prof.usuario_nombre_completo or prof.username
+    } for prof in profesores]
+
+    
+    return Response(data)

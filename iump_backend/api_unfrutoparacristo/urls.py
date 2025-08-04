@@ -1,5 +1,6 @@
 # api_unfrutoparacristo/urls.py
 from django.urls import path
+from django.contrib.auth import views as auth_views
 from rest_framework_simplejwt.views import TokenRefreshView 
 
 # Importa TODAS tus vistas personalizadas desde tu archivo views.py
@@ -31,13 +32,22 @@ from .views import (
     CrearDesafioView,
     AsignarFrutoView,
     TipoServicioListView,
-    FrutoListView
+    FrutoListView,
+    CrearNoticiaView,
+    GestionNoticiasView,
+    confirmar_reset,
+    enviar_reset,
+    profesores_de_mi_clase
 )
 
 urlpatterns = [
     # Rutas de autenticación JWT
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Rutas de reseteo de pasword
+    path('auth/enviar-reset/', enviar_reset, name='enviar_reset'),
+    path('auth/confirmar-reset/', confirmar_reset, name='confirmar_reset'),
 
     # Rutas de registro
     path('usuarios/validar-rut/', ValidarRutView.as_view(), name='validar_rut'),
@@ -61,6 +71,14 @@ urlpatterns = [
     path('eliminar-alumno/<int:pk>/', EliminarAlumnoView.as_view(), name='eliminar-alumno-admin'),
     path('servicios/', ServicioListAPIView.as_view(), name='api_servicios'),
     path('servicios-disponibles/', ServiciosDisponiblesListView.as_view(), name='servicios-disponibles'),
+    path('profesores-de-mi-clase/', profesores_de_mi_clase, name='profesores-de-mi-clase'),
+    path('gestionar-noticias/', GestionNoticiasView.as_view(), name='gestionar-noticias'),
+    path('crear-noticia/', CrearNoticiaView.as_view(), name='crear-noticia'),
+    path('crear-servicio/', CrearServicioView.as_view(), name='crear-servicio'),
+    path('gestionar-desafio-clase/', CrearDesafioView.as_view(), name='gestionar-desafio-clase'),
+    path('asignar-fruto/', AsignarFrutoView.as_view(), name='asignar-fruto'),
+    path('tipos-servicio/', TipoServicioListView.as_view(), name='tipos-servicio-list'),
+    path('frutos/', FrutoListView.as_view(), name='frutos-list'),
 
     # --- URLs para la Cesta y el Árbol ---
     path('cesta/', CestaDetailView.as_view(), name='cesta-detail'),
@@ -72,10 +90,6 @@ urlpatterns = [
 
     # --- URLs para el Home ---
     path('home-data/', HomePageDataView.as_view(), name='home-data'),
-    path('crear-servicio/', CrearServicioView.as_view(), name='crear-servicio'),
-    path('crear-desafio/', CrearDesafioView.as_view(), name='crear-desafio'),
-    path('asignar-fruto/', AsignarFrutoView.as_view(), name='asignar-fruto'),
-    path('tipos-servicio/', TipoServicioListView.as_view(), name='tipos-servicio-list'),
-    path('frutos/', FrutoListView.as_view(), name='frutos-list'),
+    
 
 ]

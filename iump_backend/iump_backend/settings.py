@@ -15,30 +15,28 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-a69**@i^7^&o06x+^@d=caz5r*$-!08bmw%-ni)d8w0%nan8()'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['proserit.ddns.net', 'www.proserit.ddns.net']
+ALLOWED_HOSTS = ['*']
 
 
 # Forzar HTTPS en todas las vistas
-SECURE_SSL_REDIRECT = True
+#SECURE_SSL_REDIRECT = True
 
 # Cookies seguras
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+#SESSION_COOKIE_SECURE = True
+#CSRF_COOKIE_SECURE = True
 
 # HSTS (solo si tienes HTTPS funcionando correctamente)
-SECURE_HSTS_SECONDS = 3600
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+#SECURE_HSTS_SECONDS = 31536000
+#SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#SECURE_HSTS_PRELOAD = True
 
 
 # Application definition
@@ -72,11 +70,12 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
-    'https://proserit.ddns.net',
+    'http://192.168.1.57:5173',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://proserit.ddns.net',
+    'http://192.168.1.57:5173',
+    
 ]
 
 
@@ -151,6 +150,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -167,3 +168,14 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+# Configuración de email con Gmail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'iumpconcon@gmail.com'
+EMAIL_HOST_PASSWORD = 'btvprgtozfqkqfvb'  # Aquí va la contraseña de aplicación
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+FRONTEND_URL = 'http://192.168.1.57:5173'

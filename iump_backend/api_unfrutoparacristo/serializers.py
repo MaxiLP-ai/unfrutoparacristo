@@ -49,14 +49,6 @@ class FrutoSerializer(serializers.ModelSerializer):
         model = Fruto
         fields = '__all__'
 
-class ServicioSerializer(serializers.ModelSerializer):
-    """
-
-    Serializador para el modelo Servicio.
-    """
-    class Meta:
-        model = Servicio
-        fields = '__all__'
 
 class ActividadSerializer(serializers.ModelSerializer):
     """
@@ -686,6 +678,7 @@ class ServicioSerializer(serializers.ModelSerializer):
         model = Servicio
         fields = [
             'servicio_id',
+            'servicio_clase',
             'servicio_descripcion',
             'servicio_fecha_hora',
             'tipo_servicio',
@@ -772,13 +765,50 @@ class CrearServicioSerializer(serializers.ModelSerializer):
         # El campo 'servicio_clase' se añade en la vista, no se espera del frontend.
         fields = ['servicio_tiposervicio', 'servicio_descripcion', 'servicio_fecha_hora', 'servicio_profesor_encargado']
 
-class CrearDesafioSerializer(serializers.ModelSerializer):
+class DesafioSeializer(serializers.ModelSerializer):
     """
-    Valida los datos para crear un nuevo Desafío general.
+    Valida los datos para CREAR o ACTUALIZAR el Desafío de la Clase.
     """
     class Meta:
-        model = Desafio
-        fields = ['desafio_descripcion', 'desafio_fruto_asociado', 'desafio_asignacionAutomatica', 'desafio_idregla']
+        model = DesafioClase
+        # La clase se asignará automáticamente en la vista.
+        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_activo']
+
+class CrearDesafioSerializer(serializers.ModelSerializer):
+    """
+    Valida los datos para CREAR o ACTUALIZAR el Desafío de la Clase.
+    """
+    class Meta:
+        model = DesafioClase
+        # La clase se asignará automáticamente en la vista.
+        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_activo']
+
+class CrearNoticiaSerializer(serializers.ModelSerializer):
+    """
+    Serializer para crear una nueva noticia.
+    """
+    class Meta:
+        model = Noticia
+        # Campos que el frontend enviará al crear una noticia.
+        # La clase se asignará automáticamente en la vista.
+        fields = ['noticia_titulo', 'noticia_contenido', 'noticia_publicada']
+
+class GestionNoticiaSerializer(serializers.ModelSerializer):
+    """
+    Serializer para listar y actualizar las noticias de una clase.
+    """
+    class Meta:
+        model = Noticia
+        # Campos que el frontend podrá leer y modificar.
+        # No incluimos la imagen por ahora, como solicitaste.
+        fields = [
+            'noticia_id', 
+            'noticia_titulo', 
+            'noticia_contenido', 
+            'noticia_publicada'
+        ]
+        # Hacemos que el ID sea de solo lectura, ya que no se debe modificar.
+        read_only_fields = ['noticia_id']
 
 class AsignarFrutoSerializer(serializers.Serializer):
     """
