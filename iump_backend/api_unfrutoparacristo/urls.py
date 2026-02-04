@@ -30,6 +30,8 @@ from .views import (
     HomePageDataView,
     CrearServicioView,
     CrearDesafioView,
+    ClaseProgresoView,
+    ClassConfigView,
     AsignarFrutoView,
     TipoServicioListView,
     FrutoListView,
@@ -38,6 +40,10 @@ from .views import (
     confirmar_reset,
     enviar_reset,
     profesores_de_mi_clase
+    ,
+    SetActiveClassView
+    ,
+    AttendanceDetailView
 )
 
 urlpatterns = [
@@ -72,7 +78,11 @@ urlpatterns = [
     path('servicios/', ServicioListAPIView.as_view(), name='api_servicios'),
     path('servicios-disponibles/', ServiciosDisponiblesListView.as_view(), name='servicios-disponibles'),
     path('profesores-de-mi-clase/', profesores_de_mi_clase, name='profesores-de-mi-clase'),
+    path('set-active-clase/', SetActiveClassView.as_view(), name='set-active-clase'),
+    path('attendance-detail/', AttendanceDetailView.as_view(), name='attendance-detail'),
     path('gestionar-noticias/', GestionNoticiasView.as_view(), name='gestionar-noticias'),
+    path('clase-progreso/', ClaseProgresoView.as_view(), name='clase-progreso'),
+    path('configurar-clase/', ClassConfigView.as_view(), name='configurar-clase'),
     path('crear-noticia/', CrearNoticiaView.as_view(), name='crear-noticia'),
     path('crear-servicio/', CrearServicioView.as_view(), name='crear-servicio'),
     path('gestionar-desafio-clase/', CrearDesafioView.as_view(), name='gestionar-desafio-clase'),

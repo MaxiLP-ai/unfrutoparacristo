@@ -7,7 +7,8 @@ from .models import (
 )
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
-from django.db.models import Q
+from django.db.models import Q, Sum, Count
+
 
 
 
@@ -180,6 +181,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
     usuario_clase_actual = ClaseSerializer(read_only=True)
     perfil = serializers.SerializerMethodField()
     usuario_avatar = serializers.SerializerMethodField()
+    usuario_clases = ClaseSerializer(read_only=True, many=True)
 
 
     class Meta:
@@ -188,7 +190,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'id', 'username', 'usuario_email', 'usuario_rol', 'usuario_rut',
             'usuario_nombre_completo', 'usuario_clase_actual',
             'is_active', 'is_staff', 'is_superuser',
-            'perfil', 'usuario_avatar', 'usuario_fecha_nacimiento'
+            'perfil', 'usuario_avatar', 'usuario_fecha_nacimiento',
+            'usuario_clases'
         ]
 
     def get_usuario_avatar(self, obj):
@@ -581,14 +584,15 @@ class AlumnoSerializerProfeAdmin(serializers.ModelSerializer):
     alumno_cambiado_por_username = serializers.SerializerMethodField()
     alumno_invitado_por_username = serializers.SerializerMethodField()
     manzanas_en_inventario = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Alumno
         fields = [
             'alumno_codigo_invitacion', 'alumno_invitado_por_username',
             'alumno_fecha_cambio_clase', 'alumno_cambiado_por_username',
             'alumno_alergias', 'alumno_enfermedades_base', 'alumno_observaciones_profesor',
-            'alumno_telefono_apoderado', 'alumno_direccion', 'manzanas_en_inventario', 'alumno_nombre_apoderado'
+            'alumno_telefono_apoderado', 'alumno_direccion',
+            'manzanas_en_inventario', 'alumno_nombre_apoderado'
         ]
 
     def get_alumno_invitado_por_username(self, obj):
@@ -603,13 +607,28 @@ class AlumnoSerializerProfeAdmin(serializers.ModelSerializer):
 
     def get_manzanas_en_inventario(self, obj):
         user = obj.alumno_usuario
+        data = {"verdes": 0, "rojas": 0, "doradas": 0}
+
         if hasattr(user, 'cesta'):
-            return (
-                user.cesta.cesta_total_verdes +
-                user.cesta.cesta_total_rojas +
-                user.cesta.cesta_total_doradas
-            )
-        return 0
+            cesta = user.cesta
+
+            # --- Contadores de la cesta ---
+            data["verdes"] += cesta.cesta_total_verdes
+            data["rojas"] += cesta.cesta_total_rojas
+            data["doradas"] += cesta.cesta_total_doradas
+
+            # --- Contadores de frutos colocados ---
+            for fruto_colocado in cesta.frutos_colocados.all():
+                nombre = fruto_colocado.frutocolocado_fruto.fruto_nombre.lower()
+                if "verde" in nombre:
+                    data["verdes"] += 1
+                elif "rojo" in nombre:
+                    data["rojas"] += 1
+                elif "dorado" in nombre:
+                    data["doradas"] += 1
+
+        return data
+
 
 
 class UsuarioSerializerProfeAdmin(serializers.ModelSerializer):
@@ -731,7 +750,7 @@ class NoticiaSerializer(serializers.ModelSerializer):
 class DesafioClaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = DesafioClase
-        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_activo']
+        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_contenido', 'desafio_activo']
 
 class ServicioSimpleSerializer(serializers.ModelSerializer):
     tipo_servicio = serializers.CharField(source='servicio_tiposervicio.Tipo_ServicioDescripcion', read_only=True)
@@ -745,6 +764,10 @@ class HomeStatsSerializer(serializers.Serializer):
     frutos_recolectados = serializers.IntegerField()
     clases_activas = serializers.IntegerField()
     asistencia_promedio = serializers.CharField()
+    asistencia_ultimo_mes = serializers.CharField()
+    promedio_frutos_por_alumno = serializers.FloatField()
+    servicios_proximos_30d = serializers.IntegerField()
+    porcentaje_alumnos_activos = serializers.CharField()
 
 class HomePageSerializer(serializers.Serializer):
     """
@@ -772,7 +795,7 @@ class DesafioSeializer(serializers.ModelSerializer):
     class Meta:
         model = DesafioClase
         # La clase se asignará automáticamente en la vista.
-        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_activo']
+        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_contenido', 'desafio_activo']
 
 class CrearDesafioSerializer(serializers.ModelSerializer):
     """
@@ -781,7 +804,18 @@ class CrearDesafioSerializer(serializers.ModelSerializer):
     class Meta:
         model = DesafioClase
         # La clase se asignará automáticamente en la vista.
-        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_activo']
+        fields = ['desafio_titulo', 'desafio_video_url', 'desafio_contenido', 'desafio_activo']
+
+    def validate(self, data):
+        # Al crear/actualizar un desafío, requerimos al menos video o contenido escrito
+        titulo = data.get('desafio_titulo') or ''
+        video = data.get('desafio_video_url')
+        contenido = data.get('desafio_contenido')
+
+        # Cuando el serializer se utiliza para update, los campos pueden venir ausentes; permitir eso
+        if not video and not contenido:
+            raise serializers.ValidationError('Se requiere al menos una URL de video o contenido escrito para el desafío.')
+        return data
 
 class CrearNoticiaSerializer(serializers.ModelSerializer):
     """

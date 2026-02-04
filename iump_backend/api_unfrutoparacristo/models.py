@@ -106,6 +106,9 @@ class Usuario(AbstractUser):
     usuario_email = models.EmailField(unique=True, blank=True, null=True, verbose_name="Correo Electrónico")
     usuario_rol = models.CharField(max_length=50, choices=ROL_CHOICES, default='alumno', verbose_name="Rol")
     usuario_clase_actual = models.ForeignKey(Clase, on_delete=models.SET_NULL, null=True, blank=True, related_name='alumnos_actuales', verbose_name="Clase Actual")
+    # Permite que un profesor esté asignado a múltiples clases.
+    # `usuario_clase_actual` sigue existiendo como la "clase activa" por defecto.
+    usuario_clases = models.ManyToManyField(Clase, blank=True, related_name='profesores_asignados', verbose_name="Clases Asignadas")
     usuario_fecha_nacimiento = models.DateField(blank=False, null=False, verbose_name="Fecha de Nacimiento")
     usuario_telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefono")
 
@@ -360,7 +363,9 @@ class DesafioClase(models.Model):
     # Cada clase solo puede tener un desafío destacado a la vez.
     desafio_clase = models.OneToOneField(Clase, on_delete=models.CASCADE, related_name='desafio_clase', verbose_name="Clase Asociada")
     desafio_titulo = models.CharField(max_length=200, verbose_name="Título del Desafío")
-    desafio_video_url = models.URLField(max_length=500, help_text="Pega aquí la URL 'embed' de YouTube", verbose_name="URL del Video")
+    desafio_video_url = models.URLField(max_length=500, blank=True, null=True, help_text="Pega aquí la URL 'embed' de YouTube (opcional)", verbose_name="URL del Video")
+    # Contenido escrito opcional para el desafío (puede coexistir con el video)
+    desafio_contenido = models.TextField(blank=True, null=True, verbose_name="Contenido del Desafío")
     # El booleano que controla si se muestra o no en el Home.
     desafio_activo = models.BooleanField(default=False, verbose_name="¿Desafío visible para los alumnos?")
 

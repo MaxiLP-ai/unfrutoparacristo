@@ -71,10 +71,12 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     'http://192.168.1.57:5173',
+    'http://172.20.10.3:5173',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'http://192.168.1.57:5173',
+    'http://172.20.10.3:5173',
     
 ]
 

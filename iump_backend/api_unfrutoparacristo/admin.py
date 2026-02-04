@@ -57,11 +57,14 @@ class UsuarioAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Información Personal', {'fields': ('usuario_nombre_completo', 'usuario_email', 'usuario_rut', 'usuario_fecha_nacimiento', 'usuario_telefono', 'usuario_avatar')}),
-        ('Asignaciones', {'fields': ('usuario_rol', 'usuario_clase_actual')}),
+        ('Asignaciones', {'fields': ('usuario_rol', 'usuario_clase_actual', 'usuario_clases')}),
         ('Permisos', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Fechas Importantes', {'fields': ('last_login', 'date_joined')}),
     )
     readonly_fields = ('last_login', 'date_joined')
+
+    # Permite editar la relación ManyToMany con un widget horizontal
+    filter_horizontal = ('usuario_clases',)
 
 
 @admin.register(Clase)

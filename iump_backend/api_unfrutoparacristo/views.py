@@ -21,6 +21,7 @@ from .models import (
     Usuario, Clase, Cesta, Fruto, FrutoColocado, Asistencia, Servicio, 
     FrutoAsignado, DesafioClase, Noticia, TipoServicio
 )
+from .models import DesafioCumplido
 from .serializers import (
     RegistroAlumnoSerializer,
     RegistroProfesorSerializer,
@@ -50,6 +51,114 @@ from .serializers import (
     GestionNoticiaSerializer,
     CrearNoticiaSerializer
 )
+
+from .serializers import ClaseSerializer
+
+
+class AttendanceDetailView(APIView):
+    """
+    Devuelve detalle de asistencia por alumno para una clase dada.
+    - Si el usuario es alumno: devuelve su historial y porcentaje (usa su clase actual).
+    - Si el usuario es profesor: requiere `?clase_id=` y devuelve lista de alumnos con asistencias y porcentaje.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        usuario = request.user
+        clase_id = request.query_params.get('clase_id')
+
+        # Alumno -> devolver histórico propio
+        if usuario.usuario_rol == 'alumno':
+            clase_alumno = usuario.usuario_clase_actual
+            if not clase_alumno:
+                return Response({'error': 'Alumno no tiene clase asignada.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            asistencias = Asistencia.objects.filter(asistencia_tipo_clase=clase_alumno).order_by('-asistencia_fecha')
+            total = asistencias.count()
+            presentes = 0
+            historial = []
+            for a in asistencias:
+                presente = usuario.usuario_rut in a.obtener_lista_ruts()
+                if presente:
+                    presentes += 1
+                historial.append({
+                    'fecha': a.asistencia_fecha,
+                    'presente': presente,
+                })
+            pct = round((presentes / total) * 100) if total > 0 else 0
+            return Response({'total_sesiones': total, 'presentes': presentes, 'porcentaje': f"{pct}%", 'historial': historial})
+
+        # Profesor -> necesita clase_id (o puede usar su clase actual si está autorizada)
+        if usuario.usuario_rol in ['profesor', 'profesor_jefe', 'profesor_asistente', 'superadmin']:
+            clase = None
+            if clase_id:
+                try:
+                    clase = Clase.objects.get(pk=clase_id)
+                except Clase.DoesNotExist:
+                    return Response({'error': 'Clase no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+                # permisos: solo superuser o profesor asignado
+                if not (usuario.is_superuser or clase in usuario.usuario_clases.all() or usuario.usuario_clase_actual == clase):
+                    return Response({'error': 'No autorizado para ver esta clase.'}, status=status.HTTP_403_FORBIDDEN)
+            else:
+                clase = _obtener_clase_seleccionada(request, usuario)
+                if not clase:
+                    return Response({'error': 'No hay clase seleccionada.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            alumnos = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase)
+            sesiones = Asistencia.objects.filter(asistencia_tipo_clase=clase)
+            total_sesiones = sesiones.count()
+            alumnos_data = []
+            for alumno in alumnos:
+                asistencias_presente = 0
+                historial = []
+                for s in sesiones:
+                    presente = alumno.usuario_rut in s.obtener_lista_ruts()
+                    if presente:
+                        asistencias_presente += 1
+                    historial.append({'fecha': s.asistencia_fecha, 'presente': presente})
+                pct = round((asistencias_presente / total_sesiones) * 100) if total_sesiones > 0 else 0
+                alumnos_data.append({'alumno_id': alumno.id, 'alumno_nombre': alumno.usuario_nombre_completo or alumno.username, 'presentes': asistencias_presente, 'porcentaje': f"{pct}%", 'historial': historial})
+
+            return Response({'clase_id': clase.clase_id, 'clase_nombre': clase.clase_nombre, 'total_sesiones': total_sesiones, 'alumnos': alumnos_data})
+
+        return Response({'error': 'Rol no soportado para esta operación.'}, status=status.HTTP_403_FORBIDDEN)
+
+
+def _obtener_clase_seleccionada(request, usuario):
+    """
+    Helper que determina qué `Clase` usar para acciones de profesor.
+    - Prioriza `clase_id` en `request.data` o `request.query_params` (si viene del frontend).
+    - Si no viene, usa `usuario.usuario_clase_actual`.
+    - Si aún no hay, usa la primera clase en `usuario.usuario_clases`.
+    - Comprueba que el usuario esté asignado a la clase (o sea superuser).
+    Devuelve instancia `Clase` o `None`.
+    """
+    from .models import Clase
+
+    clase_id = None
+    if hasattr(request, 'data') and isinstance(request.data, dict):
+        clase_id = request.data.get('clase_id')
+    if not clase_id:
+        clase_id = request.query_params.get('clase_id') if hasattr(request, 'query_params') else None
+
+    # Si se proporcionó clase_id explícita, validarla y chequear pertenencia
+    if clase_id:
+        try:
+            clase = Clase.objects.get(pk=clase_id)
+        except Clase.DoesNotExist:
+            return None
+
+        # Permitir si es superuser o si la clase está en las asignadas del profesor
+        if usuario.is_superuser or clase in usuario.usuario_clases.all() or usuario.usuario_clase_actual == clase:
+            return clase
+        return None
+
+    # Fallbacks: clase actual o primera asignada
+    if usuario.usuario_clase_actual:
+        return usuario.usuario_clase_actual
+
+    primera = usuario.usuario_clases.first()
+    return primera
 
 # ===================================================================
 # VISTAS DE RESETEO DE PASSWORD
@@ -279,32 +388,38 @@ class HomePageDataView(APIView):
 
     def get(self, request):
         usuario = request.user
-        
+        # Determinar clase seleccionada (si aplica):
+        clase_seleccionada_para_home = None
+        if usuario.usuario_rol in ['profesor', 'profesor_jefe', 'profesor_asistente', 'superadmin']:
+            clase_seleccionada_para_home = _obtener_clase_seleccionada(request, usuario)
+
         # 1. Estadísticas Generales
         # Estos cálculos son ejemplos. Puedes hacerlos tan complejos como necesites.
         stats_data = {
             "total_alumnos": Usuario.objects.filter(usuario_rol='alumno').count(),
             "frutos_recolectados": FrutoAsignado.objects.count(),
             "clases_activas": Clase.objects.count(), # Asumiendo un campo 'is_active' en Clase
-            "asistencia_promedio": "75%" # Esto requeriría un cálculo más complejo
+            "asistencia_promedio": None # Calcularemos abajo según el usuario
         }
 
         # 2. Últimas Noticias
         # --- 2. LÓGICA DE FILTRADO DE NOTICIAS CORREGIDA ---
-        clase_del_usuario = usuario.usuario_clase_actual
-        
+        # Para noticias y desafío usamos la clase seleccionada (si el usuario es profesor),
+        # de lo contrario para alumnos usamos su `usuario_clase_actual`.
+        clase_para_contenido = clase_seleccionada_para_home if clase_seleccionada_para_home else usuario.usuario_clase_actual
+
         noticias = Noticia.objects.filter(
-            Q(noticia_clase__isnull=True) | Q(noticia_clase=clase_del_usuario),
+            Q(noticia_clase__isnull=True) | Q(noticia_clase=clase_para_contenido),
             noticia_publicada=True
-        ).distinct().order_by('-noticia_fecha_publicacion')[:8] # Usamos distinct() y ordenamos
+        ).distinct().order_by('-noticia_fecha_publicacion')[:8]
 
         # 3. Desafío de la Clase
         # Busca el desafío específico para la clase del usuario actual.
         desafio_clase = None
-        if usuario.usuario_clase_actual:
+        if clase_para_contenido:
             try:
                 desafio_clase = DesafioClase.objects.get(
-                    desafio_clase=usuario.usuario_clase_actual,
+                    desafio_clase=clase_para_contenido,
                     desafio_activo=True # Solo muestra el desafío si está activo
                 )
             except DesafioClase.DoesNotExist:
@@ -313,13 +428,133 @@ class HomePageDataView(APIView):
         # 4. Próximo Servicio de la Clase
         # Busca el servicio más próximo en el futuro para la clase del usuario.
         proximo_servicio = None
-        if usuario.usuario_clase_actual:
+        if clase_para_contenido:
             proximo_servicio = Servicio.objects.filter(
-                servicio_clase=usuario.usuario_clase_actual,
+                servicio_clase=clase_para_contenido,
                 servicio_fecha_hora__gte=timezone.now()
             ).order_by('servicio_fecha_hora').first()
 
         # 5. Empaquetar todo en el serializer principal
+        # Calcular asistencia promedio real:
+        asistencia_promedio = None
+
+        try:
+            if usuario.usuario_rol == 'alumno':
+                # Promedio del alumno: cuántas asistencias registradas para su clase
+                clase_alumno = usuario.usuario_clase_actual
+                if clase_alumno:
+                    asistencias = Asistencia.objects.filter(asistencia_tipo_clase=clase_alumno)
+                    total_asistencias = asistencias.count()
+                    if total_asistencias > 0:
+                        asistencias_presente = 0
+                        rut = usuario.usuario_rut
+                        for a in asistencias:
+                            if rut in a.obtener_lista_ruts():
+                                asistencias_presente += 1
+                        pct = round((asistencias_presente / total_asistencias) * 100)
+                        asistencia_promedio = f"{pct}%"
+            elif usuario.usuario_rol in ['profesor', 'profesor_jefe', 'profesor_asistente', 'superadmin']:
+                # Promedio para la clase seleccionada por el profesor (o por query param)
+                clase_prof = clase_seleccionada_para_home
+                if clase_prof:
+                    alumnos = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase_prof)
+                    num_alumnos = alumnos.count()
+                    asistencias = Asistencia.objects.filter(asistencia_tipo_clase=clase_prof)
+                    total_asistencias = asistencias.count()
+                    if num_alumnos > 0 and total_asistencias > 0:
+                        total_asistencias_registradas = 0
+                        for a in asistencias:
+                            total_asistencias_registradas += len(a.obtener_lista_ruts())
+                        max_posible = num_alumnos * total_asistencias
+                        pct = round((total_asistencias_registradas / max_posible) * 100)
+                        asistencia_promedio = f"{pct}%"
+        except Exception:
+            asistencia_promedio = None
+
+        stats_data['asistencia_promedio'] = asistencia_promedio or "0%"
+
+        # --- Métricas adicionales ---
+        fecha_hoy = timezone.now().date()
+        desde_30d = fecha_hoy - datetime.timedelta(days=30)
+
+        # 1) Asistencia en último mes (porcentaje)
+        asistencia_ultimo_mes = None
+        try:
+            if usuario.usuario_rol == 'alumno':
+                clase_alumno = usuario.usuario_clase_actual
+                if clase_alumno:
+                    sesiones_mes = Asistencia.objects.filter(asistencia_tipo_clase=clase_alumno, asistencia_fecha__gte=desde_30d)
+                    total_sesiones = sesiones_mes.count()
+                    if total_sesiones > 0:
+                        presentes = sum(1 for s in sesiones_mes if usuario.usuario_rut in s.obtener_lista_ruts())
+                        asistencia_ultimo_mes = f"{round((presentes/total_sesiones)*100)}%"
+            else:
+                clase_prof = clase_seleccionada_para_home
+                if clase_prof:
+                    sesiones_mes = Asistencia.objects.filter(asistencia_tipo_clase=clase_prof, asistencia_fecha__gte=desde_30d)
+                    total_posibles = sesiones_mes.count() * Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase_prof).count()
+                    if total_posibles > 0:
+                        presentes = sum(len(s.obtener_lista_ruts()) for s in sesiones_mes)
+                        asistencia_ultimo_mes = f"{round((presentes/total_posibles)*100)}%"
+        except Exception:
+            asistencia_ultimo_mes = None
+
+        # 2) Promedio de frutos por alumno (últimos 30 días)
+        promedio_frutos_por_alumno = None
+        try:
+            if usuario.usuario_rol == 'alumno':
+                clase_alumno = usuario.usuario_clase_actual
+                if clase_alumno:
+                    alumnos = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase_alumno)
+                    if alumnos.exists():
+                        total_frutos = FrutoAsignado.objects.filter(frutoasignado_usuario__usuario_clase_actual=clase_alumno, frutoasignado_fecha__gte=desde_30d).count()
+                        promedio_frutos_por_alumno = round(total_frutos / alumnos.count(), 2)
+            else:
+                clase_prof = clase_seleccionada_para_home
+                if clase_prof:
+                    alumnos = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase_prof)
+                    if alumnos.exists():
+                        total_frutos = FrutoAsignado.objects.filter(frutoasignado_usuario__usuario_clase_actual=clase_prof, frutoasignado_fecha__gte=desde_30d).count()
+                        promedio_frutos_por_alumno = round(total_frutos / alumnos.count(), 2)
+        except Exception:
+            promedio_frutos_por_alumno = None
+
+        # 3) Servicios próximos 30 días (para la clase)
+        servicios_proximos_30d = 0
+        try:
+            clase_consulta = clase_para_contenido
+            if clase_consulta:
+                hasta_30d = timezone.now() + datetime.timedelta(days=30)
+                servicios_proximos_30d = Servicio.objects.filter(servicio_clase=clase_consulta, servicio_fecha_hora__gte=timezone.now(), servicio_fecha_hora__lte=hasta_30d).count()
+        except Exception:
+            servicios_proximos_30d = 0
+
+        # 4) % alumnos activos (asistieron al menos una vez en últimos 30 días)
+        porcentaje_alumnos_activos = None
+        try:
+            clase_consulta = clase_para_contenido
+            if clase_consulta:
+                alumnos = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase_consulta)
+                total_al = alumnos.count()
+                if total_al > 0:
+                    asistentes = 0
+                    sesiones_mes = Asistencia.objects.filter(asistencia_tipo_clase=clase_consulta, asistencia_fecha__gte=desde_30d)
+                    ruts_presentes = set()
+                    for s in sesiones_mes:
+                        ruts_presentes.update(s.obtener_lista_ruts())
+                    # Contar alumnos cuyo rut esté en ruts_presentes
+                    asistentes = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase_consulta, usuario_rut__in=list(ruts_presentes)).count()
+                    porcentaje_alumnos_activos = f"{round((asistentes/total_al)*100)}%"
+        except Exception:
+            porcentaje_alumnos_activos = None
+
+        stats_data.update({
+            'asistencia_ultimo_mes': asistencia_ultimo_mes or "0%",
+            'promedio_frutos_por_alumno': promedio_frutos_por_alumno or 0,
+            'servicios_proximos_30d': servicios_proximos_30d,
+            'porcentaje_alumnos_activos': porcentaje_alumnos_activos or "0%",
+        })
+
         data = {
             'stats': stats_data,
             'noticias': noticias,
@@ -342,10 +577,11 @@ class TeacherDashboardView(APIView):
         if user.usuario_rol not in ['profesor', 'profesor_jefe', 'profesor_asistente', 'superadmin']:
             return Response({"detail": "Acceso no autorizado."}, status=status.HTTP_403_FORBIDDEN)
 
-        clase_asignada = user.usuario_clase_actual
-        total_alumnos = 0
-        if clase_asignada:
-            total_alumnos = Usuario.objects.filter(usuario_clase_actual=clase_asignada, usuario_rol='alumno').count()
+        clase_asignada = _obtener_clase_seleccionada(request, user)
+        if not clase_asignada:
+            return Response({"detail": "No se encontró una clase asignada. Pasa `clase_id` o asigna clases al profesor."}, status=status.HTTP_400_BAD_REQUEST)
+
+        total_alumnos = Usuario.objects.filter(usuario_clase_actual=clase_asignada, usuario_rol='alumno').count()
 
         hoy = timezone.now().date()
         frutos_recolectados = FrutoAsignado.objects.filter(
@@ -354,11 +590,10 @@ class TeacherDashboardView(APIView):
         ).count() if clase_asignada else 0
 
         servicio_actual = None
-        if clase_asignada:
-            servicio_actual = Servicio.objects.filter(
-                servicio_clase=clase_asignada,
-                servicio_fecha_hora__gte=timezone.now()
-            ).order_by('servicio_fecha_hora').first()
+        servicio_actual = Servicio.objects.filter(
+            servicio_clase=clase_asignada,
+            servicio_fecha_hora__gte=timezone.now()
+        ).order_by('servicio_fecha_hora').first()
         
         # Lógica de anuncios (puedes reemplazarla con tu modelo Noticia)
         anuncios_recientes = [] 
@@ -386,8 +621,12 @@ class CrearServicioView(APIView):
     def post(self, request):
         serializer = CrearServicioSerializer(data=request.data)
         if serializer.is_valid():
-            # Asigna la clase del profesor que está creando el servicio
-            serializer.save(servicio_clase=request.user.usuario_clase_actual)
+            # Determina la clase a usar (por `clase_id`, por `usuario_clase_actual` o por asignación)
+            clase_para_servicio = _obtener_clase_seleccionada(request, request.user)
+            if not clase_para_servicio:
+                return Response({"detail": "No se encontró una clase válida para crear el servicio."}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer.save(servicio_clase=clase_para_servicio)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -400,12 +639,13 @@ class DesafioClaseActualView(APIView):
 
     def get(self, request):
         usuario = request.user
-        if not usuario.usuario_clase_actual:
+        clase = _obtener_clase_seleccionada(request, usuario)
+        if not clase:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         try:
-            desafio = DesafioClase.objects.get(desafio_clase=usuario.usuario_clase_actual)
-            serializer = DesafioClaseSerializer(desafio) # Asume que tienes este serializer
+            desafio = DesafioClase.objects.get(desafio_clase=clase)
+            serializer = DesafioClaseSerializer(desafio)
             return Response(serializer.data)
         except DesafioClase.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -420,11 +660,12 @@ class CrearDesafioView(APIView):
     def get(self, request):
         """Devuelve el desafío de la clase actual para pre-rellenar el formulario."""
         usuario = request.user
-        if not usuario.usuario_clase_actual:
+        clase = _obtener_clase_seleccionada(request, usuario)
+        if not clase:
             return Response({"detail": "Profesor no tiene clase asignada."}, status=status.HTTP_404_NOT_FOUND)
-        
+
         try:
-            desafio = DesafioClase.objects.get(desafio_clase=usuario.usuario_clase_actual)
+            desafio = DesafioClase.objects.get(desafio_clase=clase)
             serializer = CrearDesafioSerializer(desafio)
             return Response(serializer.data)
         except DesafioClase.DoesNotExist:
@@ -433,19 +674,103 @@ class CrearDesafioView(APIView):
     def post(self, request):
         """Crea o actualiza el desafío de la clase."""
         usuario = request.user
-        clase = usuario.usuario_clase_actual
+        clase = _obtener_clase_seleccionada(request, usuario)
 
         if not clase:
             return Response({"detail": "El profesor no tiene una clase asignada."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Usamos update_or_create para manejar ambos casos (crear y actualizar) de forma atómica.
+        # Validamos los datos primero para aplicar reglas (ej. requerir video o contenido)
+        serializer_input = CrearDesafioSerializer(data=request.data)
+        serializer_input.is_valid(raise_exception=True)
+
+        # Normalizar y usar los datos validados al guardar para evitar problemas con '' vs None
+        validated = serializer_input.validated_data
+
         desafio, created = DesafioClase.objects.update_or_create(
             desafio_clase=clase,
-            defaults=request.data
+            defaults=validated
         )
-        
+
         serializer = CrearDesafioSerializer(desafio)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class ClaseProgresoView(APIView):
+    """Devuelve métricas de progreso para la clase seleccionada (attendance trend, frutas por alumno, servicios próximos, completaciones)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        usuario = request.user
+        clase = _obtener_clase_seleccionada(request, usuario)
+        if not clase:
+            return Response({"detail": "No se encontró una clase válida."}, status=status.HTTP_400_BAD_REQUEST)
+
+        hoy = timezone.now().date()
+        inicio_30 = hoy - datetime.timedelta(days=29)  # incluir hoy -> 30 días
+
+        # Alumnos activos en la clase (según usuario_clase_actual)
+        total_alumnos = Usuario.objects.filter(usuario_rol='alumno', usuario_clase_actual=clase).count()
+
+        # Frutos en últimos 30 días por alumnos de la clase
+        frutos_30 = FrutoAsignado.objects.filter(frutoasignado_fecha__gte=inicio_30, frutoasignado_usuario__usuario_clase_actual=clase).count()
+        promedio_frutos_por_alumno = round(frutos_30 / total_alumnos, 2) if total_alumnos else 0
+
+        # Servicios próximos 30 días
+        ahora = timezone.now()
+        fin_30 = ahora + datetime.timedelta(days=30)
+        servicios_prox = Servicio.objects.filter(servicio_clase=clase, servicio_fecha_hora__gte=ahora, servicio_fecha_hora__lte=fin_30).count()
+
+        # Completaciones de desafíos en últimos 30 días (usuarios únicos)
+        completaciones_unicas = DesafioCumplido.objects.filter(desaficump_fecha__date__gte=inicio_30, desaficump_usuario__usuario_clase_actual=clase).values('desaficump_usuario').distinct().count()
+        tasa_completacion = round((completaciones_unicas / total_alumnos) * 100, 2) if total_alumnos else 0
+
+        # Tendencia de asistencia (lista de fechas con cantidad de presentes)
+        attendance_trend = []
+        asistencias = Asistencia.objects.filter(asistencia_tipo_clase=clase, asistencia_fecha__gte=inicio_30).order_by('asistencia_fecha')
+        # Build a dict date->count
+        fecha_map = {a.asistencia_fecha: len(a.obtener_lista_ruts()) for a in asistencias}
+        for i in range(30):
+            d = inicio_30 + datetime.timedelta(days=i)
+            attendance_trend.append({"date": d.isoformat(), "present": fecha_map.get(d, 0)})
+
+        data = {
+            'total_alumnos': total_alumnos,
+            'promedio_frutos_por_alumno': promedio_frutos_por_alumno,
+            'servicios_proximos_30d': servicios_prox,
+            'tasa_completacion_desafio_pct': tasa_completacion,
+            'attendance_trend': attendance_trend,
+        }
+
+        return Response(data)
+
+
+class ClassConfigView(APIView):
+    """Permite obtener y actualizar datos básicos de una clase (nombre, edades, descripción)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        usuario = request.user
+        clase = _obtener_clase_seleccionada(request, usuario)
+        if not clase:
+            return Response({"detail": "No se encontró una clase válida."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ClaseSerializer(clase)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        usuario = request.user
+        clase = _obtener_clase_seleccionada(request, usuario)
+        if not clase:
+            return Response({"detail": "No se encontró una clase válida."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Permisos: solo superuser o profesor jefe/assignado pueden editar
+        if not (usuario.is_superuser or clase in usuario.usuario_clases.all() or usuario.usuario_clase_actual == clase):
+            return Response({"detail": "No autorizado."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ClaseSerializer(clase, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
 class CrearNoticiaView(APIView):
@@ -457,8 +782,12 @@ class CrearNoticiaView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = CrearNoticiaSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            # Asigna automáticamente la clase del profesor que está creando la noticia
-            serializer.save(noticia_clase=request.user.usuario_clase_actual)
+            # Asigna la clase elegida por el profesor
+            clase_para_noticia = _obtener_clase_seleccionada(request, request.user)
+            if not clase_para_noticia:
+                return Response({"detail": "No se encontró una clase válida para la noticia."}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer.save(noticia_clase=clase_para_noticia)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -471,7 +800,7 @@ class GestionNoticiasView(APIView):
 
     def get(self, request):
         usuario = request.user
-        clase_profesor = usuario.usuario_clase_actual
+        clase_profesor = _obtener_clase_seleccionada(request, usuario)
 
         if not clase_profesor:
             return Response({"error": "Este usuario no tiene una clase asignada."}, status=status.HTTP_400_BAD_REQUEST)
@@ -512,25 +841,17 @@ class AsignarFrutoView(APIView):
         if serializer.is_valid():
             data = serializer.validated_data
             profesor = request.user
-            
-            # --- LÓGICA DE VALIDACIÓN AÑADIDA ---
-            
-            # 1. Nos aseguramos de que el profesor tenga una clase asignada.
-            if not profesor.usuario_clase_actual:
-                return Response(
-                    {"detail": "No tienes una clase asignada para realizar esta acción."}, 
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            # Determinar la clase que el profesor está administrando (puede venir por `clase_id`)
+            clase_activa = _obtener_clase_seleccionada(request, profesor)
+            if not clase_activa:
+                return Response({"detail": "No tienes una clase asignada para realizar esta acción."}, status=status.HTTP_403_FORBIDDEN)
 
             # 2. Obtenemos el alumno al que se le quiere asignar el fruto.
             alumno = Usuario.objects.get(id=data['alumno_id'])
 
-            # 3. ¡La comprobación clave! Verificamos si la clase del alumno es la misma que la del profesor.
-            if alumno.usuario_clase_actual != profesor.usuario_clase_actual:
-                return Response(
-                    {"detail": "No puedes asignar frutos a un alumno que no pertenece a tu clase."}, 
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            # 3. Verificamos si la clase del alumno es la misma que la que administra el profesor.
+            if alumno.usuario_clase_actual != clase_activa:
+                return Response({"detail": "No puedes asignar frutos a un alumno que no pertenece a tu clase."}, status=status.HTTP_403_FORBIDDEN)
             
             # --- FIN DE LA LÓGICA DE VALIDACIÓN ---
 
@@ -560,41 +881,38 @@ class GestionAlumnosListView(APIView):
 
     def get(self, request):
         usuario = request.user
-        alumnos = []
         es_jefe = False
-        clase_del_profesor = usuario.usuario_clase_actual
-
-        # --- LÓGICA CORREGIDA ---
-        # Ahora, la vista SIEMPRE filtra por la clase del usuario,
-        # sin importar si es superadmin o profesor.
+        clase_del_profesor = _obtener_clase_seleccionada(request, usuario)
 
         if not clase_del_profesor:
-            # Si el usuario no tiene una clase asignada, no puede ver alumnos.
             return Response({
                 "perfil_profesor": {"rol": usuario.usuario_rol, "es_jefe": False, "clase_info": None},
                 "alumnos": []
             })
 
-        # Filtra los alumnos que pertenecen a la clase del usuario logueado.
+        # Consulta OPTIMIZADA:
+        # Usamos `select_related` para la relación OneToOne (cesta)
+        # y `prefetch_related` para la relación inversa ManyToOne (frutos_colocados)
         alumnos = Usuario.objects.filter(
-            usuario_rol='alumno', 
+            usuario_rol='alumno',
             usuario_clase_actual=clase_del_profesor
-        )
+        ).select_related('perfil_alumno', 'cesta').prefetch_related('cesta__frutos_colocados', 'cesta__frutos_colocados__frutocolocado_fruto')
 
-        # La lógica para determinar si es "jefe" se mantiene.
+
         if usuario.is_superuser:
             es_jefe = True
         elif hasattr(usuario, 'perfil_profesor'):
-            if clase_del_profesor.clase_profesor_jefe == usuario.perfil_profesor:
+            # Comparar el profesor jefe asignado en la clase con el usuario actual
+            if clase_del_profesor.clase_profesor_jefe == usuario:
                 es_jefe = True
         
-        # Se prepara la respuesta con los datos ya filtrados
         data = {
             "perfil_profesor": {
                 "rol": usuario.usuario_rol,
                 "es_jefe": es_jefe,
                 "clase_info": ClaseSerializer(clase_del_profesor).data
             },
+            # Usa el serializer que ya tenías
             "alumnos": UsuarioSerializerProfeAdmin(alumnos, many=True).data
         }
 
@@ -615,8 +933,9 @@ class CrearAlumnoDesdeAdminView(APIView):
         # La lógica para asignar la clase del profesor se mantiene.
         # Esto es útil si el profesor que crea al alumno tiene una clase asignada.
         if usuario.usuario_rol in ['profesor', 'profesor_jefe'] and not data.get("usuario_clase_actual"):
-            if usuario.usuario_clase_actual:
-                data["usuario_clase_actual"] = usuario.usuario_clase_actual.clase_id
+            clase_default = _obtener_clase_seleccionada(request, usuario)
+            if clase_default:
+                data["usuario_clase_actual"] = clase_default.clase_id
         
         # Se utiliza el serializer de registro para crear el nuevo alumno.
         serializer = RegistroAlumnoSerializer(data=data)
@@ -709,7 +1028,7 @@ class AlumnosDeClaseListView(APIView):
 
     def get(self, request):
         usuario = request.user
-        clase = usuario.usuario_clase_actual
+        clase = _obtener_clase_seleccionada(request, usuario)
 
         if not clase:
             return Response([], status=status.HTTP_200_OK)
@@ -761,7 +1080,9 @@ class GuardarAsistenciaView(APIView):
         # 3. Ejecutar la lógica de negocio
         try:
             servicio = Servicio.objects.get(pk=servicio_id)
-            clase = request.user.usuario_clase_actual
+            clase = _obtener_clase_seleccionada(request, request.user)
+            if not clase:
+                return Response({"error": "Usuario no tiene una clase asignada."}, status=status.HTTP_400_BAD_REQUEST)
             fecha = servicio.servicio_fecha_hora.date()
 
             # get_or_create es una excelente forma de manejar esto
@@ -964,20 +1285,45 @@ class ClaseListView(generics.ListAPIView):
     serializer_class = ClaseSerializer
     permission_classes = [AllowAny]
 
+
+class SetActiveClassView(APIView):
+    """Permite al usuario autenticado (profesor) establecer su clase activa.
+    Valida que el usuario esté asignado a la clase o sea superuser.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        clase_id = request.data.get('clase_id')
+        if not clase_id:
+            return Response({'detail': 'clase_id requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            clase = Clase.objects.get(pk=clase_id)
+        except Clase.DoesNotExist:
+            return Response({'detail': 'Clase no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        usuario = request.user
+        # Permitir si es superuser o si la clase está entre las asignadas al usuario
+        if not (usuario.is_superuser or clase in usuario.usuario_clases.all()):
+            return Response({'detail': 'No autorizado para seleccionar esta clase.'}, status=status.HTTP_403_FORBIDDEN)
+
+        usuario.usuario_clase_actual = clase
+        usuario.save()
+
+        return Response({'detail': 'Clase activa actualizada.', 'usuario_clase_actual': ClaseSerializer(clase).data}, status=status.HTTP_200_OK)
+
     
 class ServicioListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         usuario = request.user
-        clase = usuario.usuario_clase_actual
+        clase = _obtener_clase_seleccionada(request, usuario)
 
         if not clase:
             return Response([], status=status.HTTP_200_OK)
 
-        servicios = Servicio.objects.filter(
-            servicio_clase=clase
-        ).order_by('servicio_fecha_hora')
+        servicios = Servicio.objects.filter(servicio_clase=clase).order_by('servicio_fecha_hora')
 
         serializer = ServicioSerializer(servicios, many=True)
         return Response(serializer.data)
@@ -989,13 +1335,9 @@ class ServiciosDisponiblesListView(APIView):
 
     def get(self, request):
         usuario = request.user
-        
-        # Primero, verificamos que el profesor tenga una clase asignada
-        if not hasattr(usuario, 'usuario_clase_actual') or not usuario.usuario_clase_actual:
-            # Si no tiene clase, no puede ver ningún servicio
+        clase_del_profesor = _obtener_clase_seleccionada(request, usuario)
+        if not clase_del_profesor:
             return Response([], status=status.HTTP_200_OK)
-
-        clase_del_profesor = usuario.usuario_clase_actual
 
         # 👇 --- LÓGICA DE FILTRADO CORREGIDA --- 👇
         # Filtramos los servicios que pertenecen a la clase del profesor
@@ -1011,10 +1353,10 @@ class ServiciosDisponiblesListView(APIView):
 @permission_classes([IsAuthenticated])
 def profesores_de_mi_clase(request):
     user = request.user
-    clase = user.usuario_clase_actual  # Asegúrate que este campo exista
+    clase = _obtener_clase_seleccionada(request, user)
     if not clase:
         return Response([], status=200)
-    
+
     profesores = Usuario.objects.filter(
         usuario_clase_actual=clase,
         usuario_rol__in=['profesor', 'profesor_jefe', 'profesor_asistente']
