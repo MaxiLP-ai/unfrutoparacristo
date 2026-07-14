@@ -19,9 +19,17 @@ from rest_framework.decorators import permission_classes
 import datetime
 from .models import (
     Usuario, Clase, Cesta, Fruto, FrutoColocado, Asistencia, Servicio, 
-    FrutoAsignado, DesafioClase, Noticia, TipoServicio
+    FrutoAsignado, DesafioClase, Noticia, TipoServicio, Alumno, MascotaEstado
 )
 from .models import DesafioCumplido
+
+FOOD_NUTRITION = {
+    'food_watermelon': {'hambre': 10, 'sed': 15, 'nombre': 'Sandía'},
+    'food_cookie': {'hambre': 15, 'sed': 5, 'nombre': 'Galleta'},
+    'food_donut': {'hambre': 20, 'sed': 5, 'nombre': 'Dona'},
+    'food_icecream': {'hambre': 15, 'sed': 25, 'nombre': 'Helado'},
+    'food_pizza': {'hambre': 35, 'sed': 10, 'nombre': 'Pizza'}
+}
 from .serializers import (
     RegistroAlumnoSerializer,
     RegistroProfesorSerializer,
@@ -1367,5 +1375,427 @@ def profesores_de_mi_clase(request):
         'nombre': prof.usuario_nombre_completo or prof.username
     } for prof in profesores]
 
-    
     return Response(data)
+
+
+# ===================================================================
+# SISTEMA DE MINIJUEGOS Y TIENDA
+# ===================================================================
+from django.db import transaction
+
+class CompletarMinijuegoView(APIView):
+    """
+    Registra monedas ganadas al completar un minijuego.
+    POST /api/minijuegos/completar/
+    """
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        usuario = request.user
+        if usuario.usuario_rol != 'alumno' and not usuario.is_superuser and usuario.usuario_rol != 'superadmin':
+            return Response({'detail': 'Solo los alumnos pueden ganar monedas.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Usar get_or_create para permitir que el administrador juegue y tenga su propio perfil de alumno
+        alumno, created = Alumno.objects.get_or_create(alumno_usuario=usuario)
+
+        minijuego = request.data.get('minijuego')
+        puntos = request.data.get('puntos', 0)
+
+        # Lógica de cálculo de monedas y anti-trampa básica
+        monedas_a_ganar = 0
+        if minijuego == 'memoria':
+            # Max 50 monedas
+            monedas_a_ganar = min(50, int(puntos))
+        elif minijuego == 'atrapa_frutas':
+            # Max 60 monedas
+            monedas_a_ganar = min(60, int(puntos))
+        elif minijuego == 'trivia':
+            # Max 10 monedas por respuesta (puntos = correctas)
+            monedas_a_ganar = min(100, int(puntos) * 5)
+        elif minijuego in ['salto_fe', 'flappy_dove', 'clicker', 'jericho', 'snake', 'math', 'simon']:
+            # Max 60 monedas
+            monedas_a_ganar = min(60, int(puntos))
+        else:
+            return Response({'detail': 'Minijuego no válido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        alumno.alumno_monedas += monedas_a_ganar
+        alumno.save()
+
+        return Response({
+            'detail': f'Ganaste {monedas_a_ganar} monedas.',
+            'monedas_ganadas': monedas_a_ganar,
+            'total_monedas': alumno.alumno_monedas
+        }, status=status.HTTP_200_OK)
+
+
+class ComprarTiendaView(APIView):
+    """
+    Realiza una compra en la tienda de recompensas.
+    POST /api/shop/comprar/
+    """
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        usuario = request.user
+        if usuario.usuario_rol != 'alumno' and not usuario.is_superuser and usuario.usuario_rol != 'superadmin':
+            return Response({'detail': 'Solo los alumnos pueden realizar compras.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Obtener o crear perfil del alumno para el administrador
+        alumno, created = Alumno.objects.get_or_create(alumno_usuario=usuario)
+
+        item_id = request.data.get('item_id')
+        item_tipo = request.data.get('item_tipo') # 'fruto' | 'skin' | 'fondo'
+        costo = request.data.get('costo', 0)
+
+        if not item_id or not item_tipo:
+            return Response({'detail': 'item_id e item_tipo requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verificar saldo
+        if alumno.alumno_monedas < costo:
+            return Response({'detail': 'No tienes monedas suficientes.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Descontar saldo
+        alumno.alumno_monedas -= costo
+
+        # Procesar según tipo de item
+        if item_tipo == 'fruto':
+            cesta, _ = Cesta.objects.get_or_create(cesta_usuario=usuario)
+            if item_id == 'verdes':
+                cesta.cesta_total_verdes += 1
+            elif item_id == 'rojas':
+                cesta.cesta_total_rojas += 1
+            elif item_id == 'doradas':
+                cesta.cesta_total_doradas += 1
+            else:
+                return Response({'detail': 'Tipo de fruto no válido.'}, status=status.HTTP_400_BAD_REQUEST)
+            cesta.save()
+        elif item_tipo in ['skin', 'fondo', 'food']:
+            # Deserializar inventario JSON
+            import json
+            try:
+                inventario = json.loads(alumno.alumno_inventario or '[]')
+            except Exception:
+                inventario = []
+
+            # Skins y fondos son de posesión única, la comida es acumulable
+            if item_tipo in ['skin', 'fondo'] and item_id in inventario:
+                return Response({'detail': 'Ya tienes este artículo comprado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            inventario.append(item_id)
+            alumno.alumno_inventario = json.dumps(inventario)
+
+        alumno.save()
+
+        # Obtener inventario como lista para retornar
+        import json
+        try:
+            inv_list = json.loads(alumno.alumno_inventario or '[]')
+        except Exception:
+            inv_list = []
+
+        cesta, _ = Cesta.objects.get_or_create(cesta_usuario=usuario)
+        return Response({
+            'detail': 'Compra realizada con éxito.',
+            'total_monedas': alumno.alumno_monedas,
+            'inventario': inv_list,
+            'cesta': {
+                'verdes': cesta.cesta_total_verdes,
+                'rojas': cesta.cesta_total_rojas,
+                'doradas': cesta.cesta_total_doradas,
+            } if item_tipo == 'fruto' else None
+        }, status=status.HTTP_200_OK)
+
+
+class EquiparMascotaView(APIView):
+    """
+    Equipa o desequipa una skin o fondo de mascota (soporta ambos simultáneamente).
+    POST /api/mascota/equipar/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        usuario = request.user
+        if usuario.usuario_rol != 'alumno' and not usuario.is_superuser and usuario.usuario_rol != 'superadmin':
+            return Response({'detail': 'Solo los alumnos pueden equipar skins.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Obtener o crear perfil del alumno para el administrador
+        alumno, created = Alumno.objects.get_or_create(alumno_usuario=usuario)
+
+        item_id = request.data.get('item_id') # Ej. 'skin_gorro', 'bg_bosque', o None para quitar todo
+        
+        # Validar si tiene la skin en su inventario
+        import json
+        try:
+            inventario = json.loads(alumno.alumno_inventario or '[]')
+        except Exception:
+            inventario = []
+
+        # Permitir bg_normal aunque no este en inventario
+        if item_id and item_id != 'bg_normal' and item_id not in inventario:
+            return Response({'detail': 'No posees este artículo en tu inventario.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        actuales = [x for x in (alumno.alumno_skin_equipada or '').split(',') if x]
+
+        if not item_id:
+            # Desequipar todo
+            alumno.alumno_skin_equipada = ''
+        else:
+            es_fondo = item_id.startswith('bg_')
+            
+            # Toggle: si ya está equipado, se remueve
+            if item_id in actuales:
+                actuales.remove(item_id)
+            else:
+                # Quitar el anterior de la misma categoría
+                if es_fondo:
+                    actuales = [x for x in actuales if not x.startswith('bg_')]
+                else:
+                    gorros = ['skin_gorro', 'skin_quico_gorro']
+                    lentes = ['skin_lentes', 'skin_lentes_vr']
+                    instrumentos = ['skin_guitarra', 'skin_violin', 'skin_bateria', 'skin_pulpito']
+                    
+                    if item_id in gorros:
+                        actuales = [x for x in actuales if x not in gorros]
+                    elif item_id in lentes:
+                        actuales = [x for x in actuales if x not in lentes]
+                    elif item_id in instrumentos:
+                        actuales = [x for x in actuales if x not in instrumentos]
+                        
+                actuales.append(item_id)
+            
+            alumno.alumno_skin_equipada = ','.join(actuales)
+
+        alumno.save()
+
+        return Response({
+            'detail': 'Equipamiento actualizado.',
+            'alumno_skin_equipada': alumno.alumno_skin_equipada
+        }, status=status.HTTP_200_OK)
+
+
+class AlimentarMascotaView(APIView):
+    """
+    Alimenta a la mascota descontando un alimento del inventario del alumno
+    y sumando salud a la mascota (hambre/sed).
+    POST /api/mascota/alimentar/
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        usuario = request.user
+        if usuario.usuario_rol != 'alumno' and not usuario.is_superuser and usuario.usuario_rol != 'superadmin':
+            return Response({'detail': 'Solo los alumnos pueden alimentar a la mascota.'}, status=status.HTTP_403_FORBIDDEN)
+
+        food_id = request.data.get('food_id')
+        if not food_id or food_id not in FOOD_NUTRITION:
+            return Response({'detail': 'Alimento no válido o no especificado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        alumno, created = Alumno.objects.get_or_create(alumno_usuario=usuario)
+        
+        import json
+        try:
+            inventario = json.loads(alumno.alumno_inventario or '[]')
+        except Exception:
+            inventario = []
+
+        # Verificar si tiene el alimento
+        if food_id not in inventario:
+            return Response({'detail': 'No posees este alimento en tu inventario.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Descontar una unidad del alimento
+        inventario.remove(food_id)
+        alumno.alumno_inventario = json.dumps(inventario)
+        alumno.save()
+
+        # Obtener o crear el estado de la mascota
+        mascota_estado, _ = MascotaEstado.objects.get_or_create(mascota_estado_usuario=usuario)
+        
+        # Incrementar hambre y sed sin pasar de 100
+        nutricion = FOOD_NUTRITION[food_id]
+        hambre_previa = mascota_estado.mascota_estado_hambre
+        sed_previa = mascota_estado.mascota_estado_sed
+
+        mascota_estado.mascota_estado_hambre = min(100, hambre_previa + nutricion['hambre'])
+        mascota_estado.mascota_estado_sed = min(100, sed_previa + nutricion['sed'])
+        mascota_estado.save()
+
+        # Calcular cuánto se incrementó realmente
+        incremento_hambre = mascota_estado.mascota_estado_hambre - hambre_previa
+        incremento_sed = mascota_estado.mascota_estado_sed - sed_previa
+
+        return Response({
+            'detail': f'¡Mascota alimentada con {nutricion["nombre"]}! 😋',
+            'hambre': mascota_estado.mascota_estado_hambre,
+            'sed': mascota_estado.mascota_estado_sed,
+            'inventario': inventario,
+            'nutricion_aplicada': {
+                'hambre': incremento_hambre,
+                'sed': incremento_sed,
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class SuperAdminToolsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.usuario_rol != 'superadmin':
+            return Response({'detail': 'Acceso restringido a Súper Administradores.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        total_usuarios = Usuario.objects.count()
+        total_alumnos = Alumno.objects.count()
+        total_profesores = Usuario.objects.filter(usuario_rol__in=['profesor', 'profesor_jefe', 'profesor_asistente']).count()
+        total_clases = Clase.objects.count()
+        
+        alumnos = Alumno.objects.all()
+        total_monedas = sum(a.alumno_monedas for a in alumnos)
+        promedio_monedas = round(total_monedas / total_alumnos) if total_alumnos > 0 else 0
+        
+        return Response({
+            'total_usuarios': total_usuarios,
+            'total_alumnos': total_alumnos,
+            'total_profesores': total_profesores,
+            'total_clases': total_clases,
+            'promedio_monedas': promedio_monedas,
+            'total_monedas_sistema': total_monedas,
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        if request.user.usuario_rol != 'superadmin':
+            return Response({'detail': 'Acceso restringido a Súper Administradores.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        action = request.data.get('action')
+        if action == 'award_coins':
+            clase_id = request.data.get('clase_id')
+            cantidad = int(request.data.get('cantidad', 0))
+            motivo = request.data.get('motivo', 'Recompensa especial del administrador')
+            
+            if cantidad <= 0:
+                return Response({'detail': 'La cantidad de monedas debe ser mayor a 0.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            if not clase_id or clase_id == 'all':
+                alumnos_a_premiar = Alumno.objects.all()
+            else:
+                try:
+                    clase = Clase.objects.get(pk=clase_id)
+                    alumnos_a_premiar = Alumno.objects.filter(alumno_usuario__usuario_clase_actual=clase)
+                except Clase.DoesNotExist:
+                    return Response({'detail': 'La clase especificada no existe.'}, status=status.HTTP_404_NOT_FOUND)
+            
+            total_premiados = 0
+            with transaction.atomic():
+                for alumno in alumnos_a_premiar:
+                    alumno.alumno_monedas += cantidad
+                    alumno.save()
+                    total_premiados += 1
+                    
+            return Response({
+                'detail': f'¡Se han otorgado {cantidad} monedas a {total_premiados} alumnos con éxito! 🪙',
+                'total_premiados': total_premiados
+            }, status=status.HTTP_200_OK)
+            
+        return Response({'detail': 'Acción no soportada.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ===================================================================
+# SISTEMA DE LOGROS AUTOMÁTICOS
+# ===================================================================
+from .logros import LOGROS_ESTABLECIDOS
+
+class ObtenerLogrosView(APIView):
+    """
+    Retorna el progreso de los logros del alumno y automáticamente premia los completados.
+    GET /api/logros/
+    """
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def get(self, request):
+        usuario = request.user
+        if usuario.usuario_rol != 'alumno' and not usuario.is_superuser and usuario.usuario_rol != 'superadmin':
+            return Response({'detail': 'Solo aplicable a alumnos.'}, status=status.HTTP_403_FORBIDDEN)
+
+        alumno, created = Alumno.objects.get_or_create(alumno_usuario=usuario)
+        
+        # Calcular métricas del alumno
+        frutos_colocados = FrutoColocado.objects.filter(frutocolocado_usuario=usuario).count()
+        asistencias = Asistencia.objects.filter(asistencia_alumno=alumno, asistencia_presente=True).count()
+        
+        import json
+        try:
+            inventario = json.loads(alumno.alumno_inventario or '[]')
+            items_inventario = len(inventario)
+        except:
+            items_inventario = 0
+
+        metricas = {
+            'frutos_colocados': frutos_colocados,
+            'asistencias': asistencias,
+            'items_inventario': items_inventario
+        }
+
+        # Analizar logros
+        logros_completados_ids = alumno.alumno_logros_completados if isinstance(alumno.alumno_logros_completados, list) else []
+        logros_completados = []
+        logros_pendientes = []
+        logros_recien_completados = []
+
+        monedas_ganadas_ahora = 0
+
+        for logro in LOGROS_ESTABLECIDOS:
+            lid = logro['id']
+            progreso_actual = metricas.get(logro['tipo_metrica'], 0)
+            
+            if lid in logros_completados_ids:
+                logros_completados.append({
+                    'id': lid,
+                    'titulo': logro['titulo'],
+                    'descripcion': logro['descripcion'],
+                    'progreso': logro['meta'],
+                    'meta': logro['meta'],
+                    'recompensa': logro['recompensa']
+                })
+            elif progreso_actual >= logro['meta']:
+                # Completó el logro ahora mismo
+                logros_completados_ids.append(lid)
+                monedas_ganadas_ahora += logro['recompensa']
+                logro_info = {
+                    'id': lid,
+                    'titulo': logro['titulo'],
+                    'descripcion': logro['descripcion'],
+                    'progreso': logro['meta'],
+                    'meta': logro['meta'],
+                    'recompensa': logro['recompensa']
+                }
+                logros_completados.append(logro_info)
+                logros_recien_completados.append(logro_info)
+            else:
+                # Sigue pendiente
+                logros_pendientes.append({
+                    'id': lid,
+                    'titulo': logro['titulo'],
+                    'descripcion': logro['descripcion'],
+                    'progreso': progreso_actual,
+                    'meta': logro['meta'],
+                    'recompensa': logro['recompensa']
+                })
+        
+        # Si hubo cambios, guardar
+        if logros_recien_completados:
+            alumno.alumno_logros_completados = logros_completados_ids
+            alumno.alumno_monedas += monedas_ganadas_ahora
+            alumno.save()
+
+        # Retornar los próximos 3 pendientes
+        proximos_logros = logros_pendientes[:3]
+
+        return Response({
+            'logros_completados': logros_completados,
+            'logros_pendientes': logros_pendientes,
+            'proximos_logros': proximos_logros,
+            'recien_completados': logros_recien_completados,
+            'total_monedas': alumno.alumno_monedas,
+            'metricas': metricas
+        }, status=status.HTTP_200_OK)

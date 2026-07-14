@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import { X, ListChecks, UserCheck, ArrowLeft, CalendarDays } from 'lucide-react';
 
-export default function ModalAsistencia({ isOpen, onClose, makeAuthenticatedRequest }) {
+export default function ModalAsistencia({ isOpen, onClose, makeAuthenticatedRequest, selectedClassId }) {
   const [servicios, setServicios] = useState([]);
   const [selectedServicio, setSelectedServicio] = useState(null);
   
@@ -16,7 +16,7 @@ export default function ModalAsistencia({ isOpen, onClose, makeAuthenticatedRequ
 
     setIsLoading(true);
     try {
-      const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/servicios-disponibles/`);
+      const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/servicios-disponibles/${selectedClassId ? `?clase_id=${selectedClassId}` : ''}`);
       if (!response.ok) throw new Error('No se pudieron cargar los servicios disponibles.');
       const data = await response.json();
       setServicios(data);
@@ -25,7 +25,7 @@ export default function ModalAsistencia({ isOpen, onClose, makeAuthenticatedRequ
     } finally {
       setIsLoading(false);
     }
-  }, [isOpen, makeAuthenticatedRequest]);
+  }, [isOpen, makeAuthenticatedRequest, selectedClassId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -44,7 +44,7 @@ export default function ModalAsistencia({ isOpen, onClose, makeAuthenticatedRequ
     setIsLoading(true);
     try {
       const [alumnosResponse, asistenciaResponse] = await Promise.all([
-        makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/alumnos-para-asistencia/`),
+        makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/alumnos-para-asistencia/${selectedClassId ? `?clase_id=${selectedClassId}` : ''}`),
         makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/asistencia-existente/${servicioId}/`)
       ]);
 
@@ -68,7 +68,7 @@ export default function ModalAsistencia({ isOpen, onClose, makeAuthenticatedRequ
     } finally {
       setIsLoading(false);
     }
-  }, [makeAuthenticatedRequest]);
+  }, [makeAuthenticatedRequest, selectedClassId]);
 
   const handleSelectServicio = (servicio) => {
     setSelectedServicio(servicio);

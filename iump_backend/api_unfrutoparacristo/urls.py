@@ -39,11 +39,15 @@ from .views import (
     GestionNoticiasView,
     confirmar_reset,
     enviar_reset,
-    profesores_de_mi_clase
-    ,
-    SetActiveClassView
-    ,
-    AttendanceDetailView
+    profesores_de_mi_clase,
+    SetActiveClassView,
+    AttendanceDetailView,
+    CompletarMinijuegoView,
+    ComprarTiendaView,
+    EquiparMascotaView,
+    AlimentarMascotaView,
+    SuperAdminToolsView,
+    ObtenerLogrosView
 )
 
 urlpatterns = [
@@ -97,9 +101,17 @@ urlpatterns = [
 
     # --- URLs para el Cuidado de la Mascota ---
     path('mascota-estado/', MascotaEstadoUpdateView.as_view(), name='mascota-estado-update'),
+    path('mascota/equipar/', EquiparMascotaView.as_view(), name='mascota-equipar'),
 
     # --- URLs para el Home ---
     path('home-data/', HomePageDataView.as_view(), name='home-data'),
-    
 
+    # --- URLs para Minijuegos y Tienda ---
+    path('minijuegos/completar/', CompletarMinijuegoView.as_view(), name='minijuegos-completar'),
+    path('shop/comprar/', ComprarTiendaView.as_view(), name='shop-comprar'),
+    path('mascota/alimentar/', AlimentarMascotaView.as_view(), name='mascota-alimentar'),
+    path('superadmin/tools/', SuperAdminToolsView.as_view(), name='superadmin-tools'),
+    
+    # --- URLs para Logros ---
+    path('logros/', ObtenerLogrosView.as_view(), name='obtener-logros'),
 ]

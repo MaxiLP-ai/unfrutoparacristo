@@ -1,5 +1,10 @@
 .pet-screen-background {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
   width: 100%;
   background: linear-gradient(135deg,rgb(63, 149, 183),rgb(254, 254, 254)); /* Sky Blue a Navy Blue */
   background-size: cover;
@@ -9,12 +14,12 @@
   font-family: 'Poppins', sans-serif;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  padding-top: 6rem; /* Aumentado el padding superior para más espacio */
+  padding: 0.5rem 1rem;
+  overflow: hidden;
   color: #333;
-  }
+}
 
   /* Patrón de fondo sutil */
   .pet-screen-background::before {
@@ -31,9 +36,10 @@
   }
 
   .pet-card {
-  background-color: transparent; /* Fondo transparente */
-  border-radius: 2rem;
-  box-shadow: none; /* Sin sombra */
+  background-color: rgba(255, 255, 255, 0.9); /* Tarjeta con fondo blanco suave */
+  border-radius: 2.5rem;
+  border: 4px solid #1e293b;
+  box-shadow: 8px 8px 0px 0px #1e293b; /* Sombra tipo cartoon */
   padding: 2.5rem;
   display: flex;
   flex-direction: column;
@@ -41,60 +47,71 @@
   gap: 1.5rem;
   max-width: 600px;
   width: 100%;
-  border: none; /* Sin borde */
   position: relative;
+  transition: transform 0.3s ease;
+  }
+  .pet-card:hover {
+    transform: scale(1.01);
   }
 
   .pet-title {
-  font-family: 'Poppins', sans-serif;
-  font-size: 2.1rem;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 2.3rem;
   font-weight: 700;
-  color:rgb(255, 255, 255);
-  letter-spacing: 1px;
+  color: #1e293b;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
   user-select: none;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
   }
 
 
   .nickname-section {
   display: flex;
   align-items: center;
-  color: rgb(64, 139, 245);
-  gap: 0.5rem;
+  color: #3b82f6;
+  gap: 0.75rem;
   margin-bottom: 1rem;
   }
 
   .nickname-input {
-
-  padding: 0.5rem 1rem;
-  border: 2px solidrgb(67, 62, 216);
-  border-radius: 0.75rem;
-  font-size: 1.1rem;
-  font-family: 'Poppins', sans-serif;
+  padding: 0.6rem 1.2rem;
+  border: 3px solid #1e293b;
+  border-radius: 1.25rem;
+  font-size: 1.2rem;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
   outline: none;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 3px 3px 0px #1e293b;
+  transition: all 0.2s ease;
   }
 
   .nickname-input:focus {
-  border-color:rgb(48, 65, 252);
-  box-shadow: 0 0 0 3px rgba(4, 0, 226, 0.3);
+  border-color: #3b82f6;
+  box-shadow: 4px 4px 0px #1e293b;
   }
 
   .edit-button, .save-button {
-  background-color:rgb(48, 65, 252);
+  background-color: #3b82f6;
   color: white;
   padding: 0.6rem 1rem;
-  border: none;
-  border-radius: 0.75rem;
+  border: 3px solid #1e293b;
+  border-radius: 1rem;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+  box-shadow: 3px 3px 0px #1e293b;
   }
 
   .edit-button:hover, .save-button:hover {
-  background-color: #6A1BA0; /* Azul violeta más oscuro */
-  transform: translateY(-2px);
+  background-color: #2563eb;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #1e293b;
+  }
+  .edit-button:active, .save-button:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #1e293b;
   }
 
   .action-buttons {
@@ -107,33 +124,33 @@
   }
 
   .action-button {
-  background: linear-gradient(45deg, #28a745, #218838); /* Verde */
+  background: linear-gradient(180deg, #10b981, #059669); /* Verde */
   color: white;
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 1rem;
+  padding: 0.85rem 1.85rem;
+  border: 3px solid #1e293b;
+  border-radius: 1.5rem;
   cursor: pointer;
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  gap: 0.6rem;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0px 5px 0px 0px #1e293b;
   }
 
   .action-button.water {
-  background: linear-gradient(45deg, #00BFFF, #1E90FF); /* Azul cielo profundo a Azul dodger */
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8); /* Azul */
   }
 
   .action-button:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0px 8px 0px 0px #1e293b;
   }
 
   .action-button:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(3px);
+  box-shadow: 0px 1px 0px 0px #1e293b;
   }
 
   /* Estilos para el pop-up de bienvenida (reutilizados y ajustados) */
@@ -224,81 +241,83 @@
   }
 
   .pet-canvas-container {
-  background: transparent; /* Sky Blue a Navy Blue */
-  height: 350px; /* Aumentado el tamaño del canvas */
-  width: 100%;
-  max-width: 400px; /* Aumentado el ancho máximo del canvas */
-  margin-bottom: 1.5rem;
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-  z-index: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 1;
   }
 
   @media (max-width: 768px) {
-  .pet-card {
-    padding: 1.5rem;
-  }
-  .pet-title {
-    font-size: 2rem;
-  }
-  .nickname-input, .edit-button, .save-button {
-    font-size: 0.9rem;
-    padding: 0.4rem 0.8rem;
-  }
-  .pet-canvas-container {
-    height: 300px; /* Ajuste para móviles */
-    max-width: 350px; /* Ajuste para móviles */
-  }
-  .action-button {
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-  }
-  .welcome-popup-content {
-    padding: 25px;
-    max-width: 95%;
-    border-radius: 15px;
-  }
-  .welcome-popup-content h2 {
-    font-size: 1.8rem;
-    margin-bottom: 15px;
-  }
-  .welcome-popup-content p {
-    font-size: 1.05rem;
-    margin-bottom: 20px;
-  }
-  .welcome-popup-button {
-    padding: 12px 25px;
-    font-size: 1.05rem;
-  }
+    .pet-screen-background {
+      padding-bottom: 3.5rem;
+    }
+    .welcome-popup-content {
+      padding: 20px;
+      max-width: 90%;
+      border-radius: 20px;
+    }
+    .welcome-popup-content h2 {
+      font-size: 1.5rem;
+      margin-bottom: 12px;
+    }
+    .welcome-popup-content p {
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+    }
+    .welcome-popup-button {
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
   }
 
   .progress-bar-container {
-  width: 80%;
-  background-color: #e0e0e0;
-  border-radius: 1rem;
-  height: 20px;
+  width: 85%;
+  background-color: #f1f5f9;
+  border-radius: 1.5rem;
+  height: 28px;
   overflow: hidden;
-  margin-bottom: 0.75rem;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.85rem;
+  border: 3px solid #1e293b;
+  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.15);
+  position: relative;
   }
 
   .progress-bar-fill {
   height: 100%;
-  border-radius: 1rem;
-  transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
-  text-align: center;
+  border-radius: 1.2rem;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: white;
-  font-weight: 600;
-  line-height: 20px;
-  font-size: 0.8rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 -4px 6px rgba(0, 0, 0, 0.2), inset 0 4px 6px rgba(255, 255, 255, 0.35);
+  position: relative;
+  overflow: hidden;
+  }
+
+  /* Animación de brillo o burbuja en la barra */
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 35%;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 1rem;
   }
 
   .hunger-bar .progress-bar-fill {
-  background: linear-gradient(90deg, #FF7F50, #FF4500); /* Coral a Naranja rojizo */
+  background: linear-gradient(180deg, #ff9f43, #ee5253); /* Naranja a Rojo suave */
   }
   .thirst-bar .progress-bar-fill {
-  background: linear-gradient(90deg, #87CEEB, #1E90FF); /* Azul cielo a Azul dodger */
+  background: linear-gradient(180deg, #48dbfb, #2e86de); /* Celeste a Azul */
   }
 
   /* Nuevos estilos para elementos flotantes decorativos */

@@ -5,6 +5,8 @@ import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import Swal from 'sweetalert2';
 import '../pages_css/TreePage.css';
+import { Link } from 'react-router-dom';
+import { FaArrowLeft } from 'react-icons/fa';
 
 // --- Configuración de Modelos y Assets ---
 const ARBOL_MODEL_PATH = '/models/arbolsimple.glb';
@@ -26,7 +28,7 @@ const FRUTO_CONFIG = {
   rojas: {
     baseScale: 0.045,
     // ¡SOLUCIÓN! Rotación en radianes (-90 grados en el eje X) para enderezar la manzana.
-    baseRotation: [-Math.PI / 2, 0, 0], 
+    baseRotation: [-Math.PI / 2, 0, 0],
     inventoryScale: 0.15,
     inventoryPosition: [-0.1, -1, 0],
     // ¡SOLUCIÓN! Usamos radianes también para la cesta.
@@ -73,7 +75,7 @@ const FrutoEnArbol = React.memo(({ id, modelo, position, scale, rotation, onDevo
     e.stopPropagation();
     // Reactivamos la cámara siempre al soltar el clic
     if (controlsRef.current) controlsRef.current.enabled = true;
-    
+
     const timeDiff = Date.now() - clickInfo.current.time;
     const distance = Math.sqrt(Math.pow(e.clientX - clickInfo.current.x, 2) + Math.pow(e.clientY - clickInfo.current.y, 2));
 
@@ -103,6 +105,8 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
   const [frutoArrastrando, setFrutoArrastrando] = useState(null);
   const [showWelcomePopup, setShowWelcomePopup] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [selectedFruitIndex, setSelectedFruitIndex] = useState(0);
+  const fruitTypes = ['verdes', 'rojas', 'doradas'];
 
   // --- Referencias ---
   const arbolRef = useRef();
@@ -125,7 +129,7 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
   // --- Lógica de Sincronización con el Backend ---
   const fetchCestaData = useCallback(async () => {
     try {
-      const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/cesta/`); 
+      const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/cesta/`);
       if (!response.ok) throw new Error('No se pudieron cargar los datos de la cesta.');
       const data = await response.json();
 
@@ -157,10 +161,10 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
   useEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', checkIsMobile);
-    
+
     document.body.style.overflow = 'hidden';
-    
-    
+
+
     fetchCestaData();
 
     return () => {
@@ -178,99 +182,99 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
     }, [frutoArrastrando]);
 
     useEffect(() => {
-        const handlePointerMove = (event) => {
-            const currentFruto = stateRef.current.frutoArrastrando;
-            if (currentFruto) {
-                event.preventDefault();
-                const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-                const clientY = event.touches ? event.touches[0].clientY : event.clientY;
-                pointer.x = (clientX / gl.domElement.clientWidth) * 2 - 1;
-                pointer.y = -(clientY / gl.domElement.clientHeight) * 2 + 1;
-                raycaster.setFromCamera(pointer, camera);
-                const intersects = raycaster.intersectObject(intersectionPlaneRef.current);
-                if (intersects.length > 0) {
-                    setFrutoArrastrando(prev => (prev ? { ...prev, position: intersects[0].point } : null));
-                }
+      const handlePointerMove = (event) => {
+        const currentFruto = stateRef.current.frutoArrastrando;
+        if (currentFruto) {
+          event.preventDefault();
+          const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+          const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+          pointer.x = (clientX / gl.domElement.clientWidth) * 2 - 1;
+          pointer.y = -(clientY / gl.domElement.clientHeight) * 2 + 1;
+          raycaster.setFromCamera(pointer, camera);
+          const intersects = raycaster.intersectObject(intersectionPlaneRef.current);
+          if (intersects.length > 0) {
+            setFrutoArrastrando(prev => (prev ? { ...prev, position: intersects[0].point } : null));
+          }
+        }
+      };
+
+      const handlePointerUp = async (event) => {
+        const currentFruto = stateRef.current.frutoArrastrando;
+        if (!currentFruto || isProcessingDrop.current) return;
+
+        isProcessingDrop.current = true;
+        if (orbitControlsRef.current) orbitControlsRef.current.enabled = true;
+
+        const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+        const clientY = event.changedTouches ? event.changedTouches[0].clientY : event.clientY;
+        pointer.x = (clientX / gl.domElement.clientWidth) * 2 - 1;
+        pointer.y = -(clientY / gl.domElement.clientHeight) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+
+        const intersects = raycaster.intersectObjects(arbolRef.current.children, true);
+
+        if (intersects.length > 0) {
+          const intersectionPoint = intersects[0].point;
+          const treeMatrixInverse = new THREE.Matrix4().copy(arbolRef.current.matrixWorld).invert();
+          const localPosition = intersectionPoint.clone().applyMatrix4(treeMatrixInverse);
+          const tipoDeFruto = currentFruto.tipo;
+
+          const frutoDataParaBackend = {
+            tipo: tipoDeFruto,
+            position: localPosition.toArray(),
+          };
+
+          try {
+            const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/cesta/poner_fruto/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(frutoDataParaBackend),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              const errorMessage = Object.values(errorData).join(' ');
+              throw new Error(errorMessage || 'El servidor no pudo guardar el fruto.');
             }
-        };
 
-        const handlePointerUp = async (event) => {
-            const currentFruto = stateRef.current.frutoArrastrando;
-            if (!currentFruto || isProcessingDrop.current) return;
-            
-            isProcessingDrop.current = true;
-            if (orbitControlsRef.current) orbitControlsRef.current.enabled = true;
+            const frutoGuardado = await response.json();
+            const configDelFruto = FRUTO_CONFIG[tipoDeFruto];
 
-            const clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
-            const clientY = event.changedTouches ? event.changedTouches[0].clientY : event.clientY;
-            pointer.x = (clientX / gl.domElement.clientWidth) * 2 - 1;
-            pointer.y = -(clientY / gl.domElement.clientHeight) * 2 + 1;
-            raycaster.setFromCamera(pointer, camera);
+            setFrutosEnArbol(prev => [...prev, {
+              ...frutoGuardado,
+              modelo: currentFruto.modelo,
+              rotation: configDelFruto.baseRotation,
+              scale: configDelFruto.baseScale
+            }]);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '¡Fruto colocado!', showConfirmButton: false, timer: 2000, timerProgressBar: true });
 
-            const intersects = raycaster.intersectObjects(arbolRef.current.children, true);
+          } catch (error) {
+            console.error("Error al colocar el fruto:", error);
+            setInventario(prev => ({ ...prev, [tipoDeFruto]: (prev[tipoDeFruto] || 0) + 1 }));
+            Swal.fire('Error', error.message, 'error');
+          }
 
-            if (intersects.length > 0) {
-                const intersectionPoint = intersects[0].point;
-                const treeMatrixInverse = new THREE.Matrix4().copy(arbolRef.current.matrixWorld).invert();
-                const localPosition = intersectionPoint.clone().applyMatrix4(treeMatrixInverse);
-                const tipoDeFruto = currentFruto.tipo;
-                
-                const frutoDataParaBackend = {
-                    tipo: tipoDeFruto,
-                    position: localPosition.toArray(),
-                };
+        } else {
+          setInventario(prev => ({ ...prev, [currentFruto.tipo]: (prev[currentFruto.tipo] || 0) + 1 }));
+          Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'El fruto volvió a tu cesta', showConfirmButton: false, timer: 2000 });
+        }
 
-                try {
-                  const response = await makeAuthenticatedRequest(`${import.meta.env.VITE_API_URL}/cesta/poner_fruto/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(frutoDataParaBackend),
-                  });
+        setFrutoArrastrando(null);
+        setTimeout(() => { isProcessingDrop.current = false; }, 100);
+      };
 
-                  if (!response.ok) {
-                    const errorData = await response.json();
-                    const errorMessage = Object.values(errorData).join(' ');
-                    throw new Error(errorMessage || 'El servidor no pudo guardar el fruto.');
-                  }
-                  
-                  const frutoGuardado = await response.json();
-                  const configDelFruto = FRUTO_CONFIG[tipoDeFruto];
-                  
-                  setFrutosEnArbol(prev => [...prev, { 
-                      ...frutoGuardado, 
-                      modelo: currentFruto.modelo, 
-                      rotation: configDelFruto.baseRotation, 
-                      scale: configDelFruto.baseScale 
-                  }]);
-                  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '¡Fruto colocado!', showConfirmButton: false, timer: 2000, timerProgressBar: true });
+      const canvasEl = gl.domElement;
+      canvasEl.addEventListener('pointermove', handlePointerMove);
+      canvasEl.addEventListener('pointerup', handlePointerUp);
+      canvasEl.addEventListener('touchmove', handlePointerMove, { passive: false });
+      canvasEl.addEventListener('touchend', handlePointerUp);
 
-                } catch (error) {
-                  console.error("Error al colocar el fruto:", error);
-                  setInventario(prev => ({ ...prev, [tipoDeFruto]: (prev[tipoDeFruto] || 0) + 1 }));
-                  Swal.fire('Error', error.message, 'error');
-                }
-
-            } else {
-                setInventario(prev => ({ ...prev, [currentFruto.tipo]: (prev[currentFruto.tipo] || 0) + 1 }));
-                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'El fruto volvió a tu cesta', showConfirmButton: false, timer: 2000 });
-            }
-            
-            setFrutoArrastrando(null);
-            setTimeout(() => { isProcessingDrop.current = false; }, 100);
-        };
-
-        const canvasEl = gl.domElement;
-        canvasEl.addEventListener('pointermove', handlePointerMove);
-        canvasEl.addEventListener('pointerup', handlePointerUp);
-        canvasEl.addEventListener('touchmove', handlePointerMove, { passive: false });
-        canvasEl.addEventListener('touchend', handlePointerUp);
-
-        return () => {
-            canvasEl.removeEventListener('pointermove', handlePointerMove);
-            canvasEl.removeEventListener('pointerup', handlePointerUp);
-            canvasEl.removeEventListener('touchmove', handlePointerMove);
-            canvasEl.removeEventListener('touchend', handlePointerUp);
-        };
+      return () => {
+        canvasEl.removeEventListener('pointermove', handlePointerMove);
+        canvasEl.removeEventListener('pointerup', handlePointerUp);
+        canvasEl.removeEventListener('touchmove', handlePointerMove);
+        canvasEl.removeEventListener('touchend', handlePointerUp);
+      };
     }, [gl, camera, pointer, raycaster]);
 
     return null;
@@ -280,7 +284,7 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
     if (inventario[tipoFruto] > 0) {
       if (orbitControlsRef.current) orbitControlsRef.current.enabled = false;
       setInventario(prev => ({ ...prev, [tipoFruto]: prev[tipoFruto] - 1 }));
-      
+
       const modelo = modelosFrutos[tipoFruto].scene;
       modelo.userData.tipo = tipoFruto;
       setFrutoArrastrando({
@@ -323,13 +327,22 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
       }
     });
   };
-  
+
   const closeWelcomePopup = () => {
     setShowWelcomePopup(false);
   };
 
   return (
     <div className="arbol-container">
+
+      {/* Botón flotante volver atrás (ya que no hay Navbar) */}
+      <Link
+        to="/home"
+        className="absolute top-4 left-4 bg-white border-4 border-slate-800 rounded-2xl p-3 text-slate-800 hover:scale-105 active:scale-95 shadow-[3px_3px_0px_0px_#1e293b] transition-all z-20 flex items-center justify-center"
+        title="Volver a Inicio"
+      >
+        <FaArrowLeft className="text-xl" />
+      </Link>
 
       {showWelcomePopup && (
         <div className="welcome-popup-overlay" onClick={closeWelcomePopup}>
@@ -347,36 +360,62 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
         </div>
       )}
 
-      <div className="cesta-inventario">
-        {Object.keys(FRUTO_CONFIG).map((tipo) => {
-          const config = FRUTO_CONFIG[tipo];
-          const cantidad = inventario ? inventario[tipo] : 0;
-          return (
-            <div key={tipo} className="cesta-item">
-              <div className="cesta-item-draggable" onPointerDown={() => handleIniciarArrastre(tipo)}>
-                <div className="cesta-canvas-container">
-                  <Canvas camera={{ position: [0, 0, 1.5], fov: 75 }}>
-                    <ambientLight intensity={1.5} />
-                    <pointLight position={[10, 10, 10]} intensity={1} />
-                    <Suspense fallback={null}>
-                      <primitive 
-                        object={modelosFrutos[tipo].scene.clone()} 
-                        scale={config.inventoryScale}
-                        position={config.inventoryPosition}
-                        rotation={config.inventoryRotation}
-                      />
-                    </Suspense>
-                  </Canvas>
+      <div className="cesta-inventario select-none">
+        <div className="flex items-center justify-between gap-4 w-full">
+          {/* Flecha Izquierda */}
+          <button
+            onClick={() => setSelectedFruitIndex(prev => (prev === 0 ? fruitTypes.length - 1 : prev - 1))}
+            className="bg-white hover:bg-amber-100 border-3 border-slate-800 rounded-xl p-2 text-slate-800 font-bold transition-all shadow-[2px_2px_0px_0px_#1e293b] active:scale-95"
+          >
+            ◀
+          </button>
+
+          {/* Fruto Seleccionado */}
+          {(() => {
+            const tipo = fruitTypes[selectedFruitIndex];
+            const config = FRUTO_CONFIG[tipo];
+            const cantidad = inventario ? inventario[tipo] : 0;
+            return (
+              <div className="cesta-item">
+                <div
+                  className="cesta-item-draggable"
+                  onPointerDown={() => handleIniciarArrastre(tipo)}
+                >
+                  <div className="cesta-canvas-container mx-auto">
+                    <Canvas camera={{ position: [0, 0, 1.5], fov: 75 }}>
+                      <ambientLight intensity={1.5} />
+                      <pointLight position={[10, 10, 10]} intensity={1} />
+                      <Suspense fallback={null}>
+                        <primitive
+                          object={modelosFrutos[tipo].scene.clone()}
+                          scale={config.inventoryScale}
+                          position={config.inventoryPosition}
+                          rotation={config.inventoryRotation}
+                        />
+                      </Suspense>
+                    </Canvas>
+                  </div>
+                  <div className="flex flex-col items-center mt-1">
+                    <span className="text-[10px] font-black text-indigo-700 capitalize tracking-wider">{tipo}</span>
+                    <span className="cesta-contador">x {cantidad}</span>
+                  </div>
                 </div>
-                <span className="cesta-contador">x {cantidad}</span>
               </div>
-            </div>
-          );
-        })}
+            );
+          })()}
+
+          {/* Flecha Derecha */}
+          <button
+            onClick={() => setSelectedFruitIndex(prev => (prev === fruitTypes.length - 1 ? 0 : prev + 1))}
+            className="bg-white hover:bg-amber-100 border-3 border-slate-800 rounded-xl p-2 text-slate-800 font-bold transition-all shadow-[2px_2px_0px_0px_#1e293b] active:scale-95"
+          >
+            ▶
+          </button>
+        </div>
       </div>
 
       <div className="canvas-wrapper">
-        <Canvas 
+        <Canvas
           camera={{ position: [0, 2, 12], fov: 50 }}
           onCreated={({ gl }) => {
             gl.domElement.addEventListener('webglcontextlost', (event) => console.error('WebGL context lost!', event));
@@ -392,8 +431,8 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
               <planeGeometry args={[100, 100]} />
               <meshBasicMaterial />
             </mesh>
-            
-            <primitive ref={arbolRef} object={arbolGLTF.scene} scale={0.8} position={[0, -14, 0]}>
+
+            <primitive ref={arbolRef} object={arbolGLTF.scene} scale={0.35} position={[0, -6, 0]}>
               {frutosEnArbol.map(fruto => (
                 <FrutoEnArbol
                   key={fruto.id}
@@ -410,14 +449,14 @@ const TreePage = ({ makeAuthenticatedRequest }) => {
             </primitive>
 
             {frutoArrastrando && frutoArrastrando.tipo && (
-              <primitive 
-                object={frutoArrastrando.modelo} 
-                position={frutoArrastrando.position} 
+              <primitive
+                object={frutoArrastrando.modelo}
+                position={frutoArrastrando.position}
                 scale={FRUTO_CONFIG[frutoArrastrando.tipo].baseScale}
                 rotation={FRUTO_CONFIG[frutoArrastrando.tipo].baseRotation}
               />
             )}
-            
+
             <SceneEvents />
           </Suspense>
         </Canvas>

@@ -145,6 +145,12 @@ class Alumno(models.Model):
     alumno_nombre_apoderado = models.CharField(max_length=255, blank=True, null=True, verbose_name="Nombre del Apoderado")
     alumno_telefono_apoderado = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono del Apoderado")
     alumno_direccion = models.CharField(max_length=255, blank=True, null=True, verbose_name="Dirección")
+    
+    # NUEVOS CAMPOS PARA EL SISTEMA DE MINIJUEGOS Y TIENDA
+    alumno_monedas = models.IntegerField(default=0, verbose_name="Monedas / Puntos de Minijuegos")
+    alumno_inventario = models.JSONField(default=list, blank=True, verbose_name="Inventario de Tienda (JSON)")
+    alumno_skin_equipada = models.CharField(max_length=255, blank=True, null=True, verbose_name="Skins Equipadas")
+    alumno_logros_completados = models.JSONField(default=list, blank=True, verbose_name="Logros Completados (IDs)")
 
     class Meta:
         verbose_name = "Alumno"

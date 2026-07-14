@@ -1,14 +1,17 @@
 .arbol-container {
   position: relative; width: 100vw; height: 100vh;
   overflow: hidden; background-image: url('/images/fondos/FondoArbol.png');
-  background-size: cover; background-position: center; font-family: 'Inter', sans-serif;
+  background-size: cover; background-position: center; font-family: 'Fredoka', sans-serif;
 }
 .canvas-wrapper { width: 100%; height: 100%; touch-action: none; }
 .cesta-inventario {
-  position: absolute; top: 50%; left: 30px; transform: translateY(-50%); flex-direction: column;
-  display: flex; gap: 20px; padding: 15px 25px; background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px); border-radius: 20px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  border: 1px solid rgba(255, 255, 255, 0.18); z-index: 10; transition: all 0.3s ease;
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 15px; padding: 12px 24px; background: rgba(254, 243, 199, 0.95); /* Amarillo madera suave */
+  border: 4px solid #1e293b; border-radius: 2rem; box-shadow: 6px 6px 0px 0px #1e293b;
+  z-index: 10; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.cesta-inventario:hover {
+  transform: translateX(-50%) scale(1.02);
 }
 .cesta-item {
   display: flex; flex-direction: column; align-items: center;
@@ -16,18 +19,22 @@
 .cesta-item-draggable {
   cursor: grab; transition: transform 0.2s ease-out;
 }
-.cesta-item-draggable:active { cursor: grabbing; transform: scale(1.1); }
+.cesta-item-draggable:active { cursor: grabbing; transform: scale(1.15); }
 .cesta-canvas-container {
   width: 80px; height: 80px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 70%);
-  transition: background 0.3s ease;
+  background: radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.3) 70%);
+  border: 3px solid #1e293b;
+  box-shadow: 0 4px 0px rgba(30, 41, 59, 0.2);
+  transition: all 0.3s ease;
 }
 .cesta-item-draggable:hover .cesta-canvas-container {
-    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 70%);
+    background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 70%);
+    transform: scale(1.05);
 }
 .cesta-contador {
-  margin-top: 8px; font-size: 1.2rem; font-weight: 700; color: #333;
-  background: rgba(255,255,255,0.7); padding: 2px 10px; border-radius: 10px;
+  margin-top: 4px; font-size: 1.1rem; font-weight: 700; color: #1e293b;
+  background: #ffffff; padding: 2px 10px; border-radius: 1rem;
+  border: 3px solid #1e293b; box-shadow: 2px 2px 0px #1e293b;
 }
 .welcome-popup-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5);
@@ -35,27 +42,30 @@
   backdrop-filter: blur(8px); animation: fadeIn 0.3s ease-out forwards;
 }
 .welcome-popup-content {
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 40px; border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); text-align: center; max-width: 500px; width: 90%;
-  font-family: 'Inter', sans-serif; color: #343a40;
-  animation: slideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; border: 1px solid #dee2e6;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7); padding: 40px; border-radius: 2.5rem;
+  box-shadow: 10px 10px 0px 0px #1e293b; text-align: center; max-width: 500px; width: 90%;
+  font-family: 'Fredoka', sans-serif; color: #1e293b;
+  animation: slideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; border: 4px solid #1e293b;
 }
 .welcome-popup-content h2 {
-  font-size: 2.2rem; margin-bottom: 20px; color: #28a745;
-  font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+  font-size: 2.3rem; margin-bottom: 20px; color: #10b981;
+  font-weight: 700; text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.05);
 }
 .welcome-popup-content p {
-  font-size: 1.2rem; line-height: 1.8; margin-bottom: 30px; color: #495057;
+  font-size: 1.25rem; line-height: 1.8; margin-bottom: 30px; color: #374151;
 }
 .welcome-popup-button {
-  background: linear-gradient(45deg, #28a745, #218838); color: white; padding: 15px 35px;
-  border: none; border-radius: 10px; cursor: pointer; font-size: 1.2rem; font-weight: 600;
-  transition: all 0.3s ease; box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
-  text-transform: uppercase; letter-spacing: 0.5px;
+  background: linear-gradient(180deg, #10b981, #059669); color: white; padding: 15px 35px;
+  border: 3px solid #1e293b; border-radius: 1.5rem; cursor: pointer; font-size: 1.3rem; font-weight: 700;
+  transition: all 0.2s ease; box-shadow: 0px 5px 0px 0px #1e293b;
 }
 .welcome-popup-button:hover {
-  background: linear-gradient(45deg, #218838, #1e7e34); transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+  background: linear-gradient(180deg, #059669, #047857); transform: translateY(-2px);
+  box-shadow: 0px 7px 0px 0px #1e293b;
+}
+.welcome-popup-button:active {
+  transform: translateY(2px);
+  box-shadow: 0px 2px 0px 0px #1e293b;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideIn {
@@ -64,13 +74,18 @@
 }
 @media (max-width: 768px) {
   .cesta-inventario {
-    top: auto; left: 50%; bottom: 80px; transform: translateX(-50%); flex-direction: row;
-    width: 90%; gap: 10px; padding: 10px; justify-content: space-around;
+    bottom: 20px;
+    width: 85%;
+    max-width: 320px;
+    padding: 8px 16px;
   }
-  .cesta-canvas-container { width: 60px; height: 60px; }
-  .cesta-contador { font-size: 1rem; }
+  .cesta-inventario:hover {
+    transform: translateX(-50%) scale(1.02);
+  }
+  .cesta-canvas-container { width: 70px; height: 70px; }
+  .cesta-contador { font-size: 1rem; padding: 2px 8px; }
   .welcome-popup-content { padding: 25px; max-width: 95%; }
-  .welcome-popup-content h2 { font-size: 1.8rem; }
-  .welcome-popup-content p { font-size: 1.05rem; }
-  .welcome-popup-button { padding: 12px 25px; font-size: 1.05rem; }
+  .welcome-popup-content h2 { font-size: 1.9rem; }
+  .welcome-popup-content p { font-size: 1.1rem; }
+  .welcome-popup-button { padding: 12px 25px; font-size: 1.15rem; }
 }

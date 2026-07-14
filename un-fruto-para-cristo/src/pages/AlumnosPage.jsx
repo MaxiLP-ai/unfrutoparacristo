@@ -316,10 +316,10 @@ export default function AlumnosPage({ makeAuthenticatedRequest }) {
 
         <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
           <input type="text" placeholder="Buscar por nombre o usuario..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="px-4 py-2 border rounded-lg w-full sm:w-auto" />
-          {canManage && (
-            <button onClick={() => handleOpenModal('add')} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
-              <Plus size={20} /> Añadir Alumno
-            </button>
+            {canManage && (
+              <button onClick={() => handleOpenModal('add')} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 w-full sm:w-auto">
+                  <Plus size={20} /> Añadir Alumno
+              </button>
           )}
         </div>
 
@@ -329,30 +329,50 @@ export default function AlumnosPage({ makeAuthenticatedRequest }) {
         {!isLoading && !error && (
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div className="space-y-2 p-4">
-              {filteredAlumnos.length > 0 ? filteredAlumnos.map(alumno => (
-                <div key={alumno.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-gray-100 group">
-                  <div className="flex items-center gap-4">
-                    <img src={`/images/avatars/${alumno.usuario_avatar || 'default.png'}`} alt="Avatar" className="w-12 h-12 rounded-full object-cover" onError={(e) => { e.target.src = "https://placehold.co/100x100/cccccc/000000?text=A"; }} />
-                    <div>
-                      <p className="font-bold text-gray-800">{alumno.usuario_nombre_completo}</p>
-                      <p className="text-sm text-gray-500">@{alumno.username}</p>
+                {filteredAlumnos.length > 0 ? filteredAlumnos.map(alumno => (
+                    <div key={alumno.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl hover:bg-gray-100 group gap-4 sm:gap-0">
+                        
+                        {/* Contenedor de la izquierda (Avatar y nombre) */}
+                        <div className="flex items-center gap-4">
+                            <img src={`/images/avatars/${alumno.usuario_avatar || 'default.png'}`} alt="Avatar" className="w-12 h-12 rounded-full object-cover" onError={(e) => { e.target.src = "https://placehold.co/100x100/cccccc/000000?text=A"; }} />
+                            <div>
+                                <p className="font-bold text-gray-800">{alumno.usuario_nombre_completo}</p>
+                                <p className="text-sm text-gray-500">@{alumno.username}</p>
+                            </div>
+                        </div>
+
+                        {/* Contenedor central (Vista de frutos) */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm sm:flex-nowrap">
+                            <div className="flex items-center gap-1">
+                                <span className="text-xs text-green-600 font-bold">Verdes:</span>
+                                <span className="font-semibold">{alumno.perfil?.manzanas_en_inventario?.verdes || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <span className="text-xs text-red-600 font-bold">Rojas:</span>
+                                <span className="font-semibold">{alumno.perfil?.manzanas_en_inventario?.rojas || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <span className="text-xs text-yellow-600 font-bold">Doradas:</span>
+                                <span className="font-semibold">{alumno.perfil?.manzanas_en_inventario?.doradas || 0}</span>
+                            </div>
+                        </div>
+
+                        {/* Contenedor de la derecha (Botones) */}
+                        <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 mt-2 sm:mt-0">
+                            <button onClick={() => handleOpenModal('view', alumno)} className="p-2 text-gray-500 hover:text-blue-600 rounded-full"><Eye size={20} /></button>
+                            {canManage && (
+                                <>
+                                    <button onClick={() => handleOpenModal('edit', alumno)} className="p-2 text-gray-500 hover:text-green-600 rounded-full"><Edit size={20} /></button>
+                                    <button onClick={() => handleDeleteAlumno(alumno)} className="p-2 text-gray-500 hover:text-red-600 rounded-full"><Trash2 size={20} /></button>
+                                </>
+                            )}
+                        </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
-                    <button onClick={() => handleOpenModal('view', alumno)} className="p-2 text-gray-500 hover:text-blue-600 rounded-full"><Eye size={20} /></button>
-                    {canManage && (
-                      <>
-                        <button onClick={() => handleOpenModal('edit', alumno)} className="p-2 text-gray-500 hover:text-green-600 rounded-full"><Edit size={20} /></button>
-                        <button onClick={() => handleDeleteAlumno(alumno)} className="p-2 text-gray-500 hover:text-red-600 rounded-full"><Trash2 size={20} /></button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )) : (
-                <p className="text-center text-gray-500 p-8">No se encontraron alumnos en esta clase.</p>
-              )}
+                )) : (
+                    <p className="text-center text-gray-500 p-8">No se encontraron alumnos en esta clase.</p>
+                )}
             </div>
-          </div>
+        </div>
         )}
       </div>
 

@@ -2,9 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+
 html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
+  font-family: 'Fredoka', sans-serif;
 }
+
+/* Clases de utilidad lúdicas para niños */
+.cartoon-border {
+  border: 3px solid #1e293b;
+}
+
+.cartoon-shadow {
+  box-shadow: 4px 4px 0px 0px #1e293b;
+}
+
+.cartoon-shadow-hover {
+  transition: all 0.2s ease;
+}
+.cartoon-shadow-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px #1e293b;
+}
+.cartoon-shadow-hover:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px 0px #1e293b;
+}
+
+/* Efecto de botón tipo burbuja */
+.bubbly-button {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  border-radius: 1.25rem;
+  border: 3px solid #1e293b;
+  box-shadow: 0px 4px 0px 0px #1e293b;
+  transition: all 0.15s ease-out;
+}
+.bubbly-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px 6px 0px 0px #1e293b;
+}
+.bubbly-button:active {
+  transform: translateY(2px);
+  box-shadow: 0px 1px 0px 0px #1e293b;
+}
+
+/* Animación de flotar (nubes o burbujas de fondo) */
+@keyframes floatBubble {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(3deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+.animate-float-slow {
+  animation: floatBubble 6s ease-in-out infinite;
+}

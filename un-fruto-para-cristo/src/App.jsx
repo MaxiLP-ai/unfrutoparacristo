@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPassword from './pages/ResetPassword';
@@ -11,10 +11,16 @@ import AlumnosPage from './pages/AlumnosPage';
 import HomePage from './pages/Home';
 import PetScreen from './pages/PetScreen';
 import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
+import AdminSettings from './pages/AdminSettings';
 import Swal from 'sweetalert2';
+import InstallPwaBanner from './components/InstallPwaBanner';
+import MinijuegosPage from './pages/MinijuegosPage';
+import TiendaPage from './pages/TiendaPage';
 
 function App() {
   const [user, setUser] = useState(null);
+  const location = useLocation();
 
   const handleSetUser = useCallback((token, rol) => {
     setUser({ token, rol });
@@ -118,40 +124,60 @@ function App() {
 
   return (
     <>
-      {user && <Navbar user={user} onLogout={handleLogout} />}
-      <Routes>
-        <Route path="/" element={user ? <Navigate to={getRedirectPath()} /> : <LoginPage setUser={handleSetUser} />} />
-        <Route path="/registro" element={<RegisterPage />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/reset-password/:token/" element={<ResetPasswordConfirmPage />} />
-        
-        <Route
-          path="/home"
-          element={user ? <HomePage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/profile"
-          element={user ? <ProfilePage user={user} onLogout={handleLogout} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/tree"
-          element={isAlumno || isSuperAdmin ? <TreePage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/pet-screen"
-          element={isAlumno || isSuperAdmin ? <PetScreen user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/control-panel"
-          element={(isProfesor || isSuperAdmin) ? <ControlPanelPage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/alumnos"
-          element={(isProfesor || isSuperAdmin) ? <AlumnosPage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
-        />
+      {user && isSuperAdmin && (
+        <Sidebar user={user} onLogout={handleLogout} />
+      )}
+      {user && !isSuperAdmin && !['/pet-screen', '/tree', '/minijuegos'].includes(location.pathname) && (
+        <Navbar user={user} onLogout={handleLogout} />
+      )}
+      <InstallPwaBanner />
+      <div className={isSuperAdmin ? "lg:pl-64 min-h-screen" : ""}>
+        <Routes>
+          <Route path="/" element={user ? <Navigate to={getRedirectPath()} /> : <LoginPage setUser={handleSetUser} />} />
+          <Route path="/registro" element={<RegisterPage />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/reset-password/:token/" element={<ResetPasswordConfirmPage />} />
+          
+          <Route
+            path="/home"
+            element={user ? <HomePage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/profile"
+            element={user ? <ProfilePage user={user} onLogout={handleLogout} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/tree"
+            element={isAlumno || isSuperAdmin ? <TreePage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/pet-screen"
+            element={isAlumno || isSuperAdmin ? <PetScreen user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/minijuegos"
+            element={isAlumno || isSuperAdmin ? <MinijuegosPage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/tienda"
+            element={isAlumno || isSuperAdmin ? <TiendaPage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/control-panel"
+            element={(isProfesor || isSuperAdmin) ? <ControlPanelPage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/alumnos"
+            element={(isProfesor || isSuperAdmin) ? <AlumnosPage user={user} makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/admin-settings"
+            element={isSuperAdmin ? <AdminSettings makeAuthenticatedRequest={makeAuthenticatedRequest} /> : <Navigate to="/" />}
+          />
 
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
     </>
   );
 }

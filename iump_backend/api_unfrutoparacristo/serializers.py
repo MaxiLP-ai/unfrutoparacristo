@@ -135,6 +135,7 @@ class AlumnoSerializer(serializers.ModelSerializer):
     alumno_cambiado_por_username = serializers.SerializerMethodField()
     mascota_estado = MascotaEstadoSerializer(source='alumno_usuario.mascota_estado', read_only=True)
     manzanas_en_inventario = serializers.SerializerMethodField()
+    alumno_inventario_list = serializers.SerializerMethodField()
     
     class Meta:
         model = Alumno
@@ -143,7 +144,8 @@ class AlumnoSerializer(serializers.ModelSerializer):
             'alumno_fecha_cambio_clase', 'alumno_cambiado_por_username',
             'alumno_alergias', 'alumno_enfermedades_base', 'alumno_observaciones_profesor',
             'alumno_telefono_apoderado', 'alumno_direccion',
-            'mascota_estado', 'manzanas_en_inventario', 'alumno_nombre_apoderado'
+            'mascota_estado', 'manzanas_en_inventario', 'alumno_nombre_apoderado',
+            'alumno_monedas', 'alumno_inventario_list', 'alumno_skin_equipada'
         ]
 
     def get_alumno_invitado_por_username(self, obj):
@@ -166,6 +168,13 @@ class AlumnoSerializer(serializers.ModelSerializer):
             )
         return 0
 
+    def get_alumno_inventario_list(self, obj):
+        try:
+            import json
+            return json.loads(obj.alumno_inventario or '[]')
+        except Exception:
+            return []
+
 
 
 class ProfesorSerializer(serializers.ModelSerializer):
@@ -181,8 +190,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
     usuario_clase_actual = ClaseSerializer(read_only=True)
     perfil = serializers.SerializerMethodField()
     usuario_avatar = serializers.SerializerMethodField()
-    usuario_clases = ClaseSerializer(read_only=True, many=True)
-
+    usuario_clases = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
@@ -197,11 +205,50 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def get_usuario_avatar(self, obj):
         return obj.usuario_avatar or None
 
+    def get_usuario_clases(self, obj):
+        clases_asignadas = list(obj.usuario_clases.all())
+        clases_jefe = list(Clase.objects.filter(clase_profesor_jefe=obj))
+        
+        # Combinar y quitar duplicados usando ID
+        union_dict = {}
+        for c in clases_asignadas + clases_jefe:
+            union_dict[c.clase_id] = c
+            
+        return ClaseSerializer(union_dict.values(), many=True).data
+
     def get_perfil(self, obj):
         if obj.usuario_rol == 'alumno' and hasattr(obj, 'perfil_alumno'):
             return AlumnoSerializer(obj.perfil_alumno).data
         elif obj.usuario_rol == 'profesor' and hasattr(obj, 'perfil_profesor'):
             return ProfesorSerializer(obj.perfil_profesor).data
+        elif obj.is_superuser or obj.usuario_rol == 'superadmin':
+            if hasattr(obj, 'perfil_alumno'):
+                return AlumnoSerializer(obj.perfil_alumno).data
+            elif hasattr(obj, 'perfil_profesor'):
+                return ProfesorSerializer(obj.perfil_profesor).data
+            else:
+                return {
+                    'alumno_codigo_invitacion': 'ADMIN1',
+                    'alumno_invitado_por_username': None,
+                    'alumno_fecha_cambio_clase': None,
+                    'alumno_cambiado_por_username': None,
+                    'alumno_alergias': '',
+                    'alumno_enfermedades_base': '',
+                    'alumno_observaciones_profesor': '',
+                    'alumno_telefono_apoderado': '',
+                    'alumno_direccion': '',
+                    'mascota_estado': {
+                        'mascota_estado_hambre': 100,
+                        'mascota_estado_sed': 100,
+                        'mascota_estado_sobrenombre': 'Mascota Admin',
+                        'mascota_estado_last_update': None,
+                    },
+                    'manzanas_en_inventario': 99,
+                    'alumno_nombre_apoderado': 'Apoderado Admin',
+                    'alumno_monedas': 9999,
+                    'alumno_inventario_list': ['skin_gorro', 'skin_lentes', 'skin_capa', 'bg_bosque', 'bg_playa'],
+                    'alumno_skin_equipada': ''
+                }
         return None
 
 

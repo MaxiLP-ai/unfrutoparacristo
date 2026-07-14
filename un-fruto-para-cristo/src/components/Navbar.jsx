@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaHome, FaTree, FaUserCircle, FaBars, FaTimes, FaPaw, FaList } from 'react-icons/fa'; // Importa los íconos, ¡añadido FaPaw!
+import { FaHome, FaTree, FaUserCircle, FaBars, FaTimes, FaPaw, FaList, FaGamepad, FaStore } from 'react-icons/fa'; // Importa los íconos, ¡añadido FaPaw!
 
 
 
@@ -20,14 +20,14 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
   };
 
   return (
-    <nav className="bg-gray-800 text-white shadow-md fixed w-full z-50 top-0"> {/* Añadido fixed, w-full, z-50, top-0 */}
+    <nav className="bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-500 text-white shadow-lg fixed w-full z-50 top-0 border-b-4 border-indigo-600"> {/* Añadido fixed, w-full, z-50, top-0 */}
       <div className=" max-w-7xl mx-auto px-2 sm:px-6 lg:apx-8">
         <div className="relative flex items-center justify-between h-16">
           {/* Icono de menú hamburguesa (visible en móvil) */}
           <div className="absolute inset-y-0 right-0 flex items-center sm:hidden">
             <button
               onClick={toggleMenu}
-              className="text-white focus:outline-none"
+              className="text-white focus:outline-none hover:scale-110 active:scale-90 transition-transform duration-200"
               aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
             >
               {isOpen ? <FaTimes className="h-6 w-6" /> : <FaBars className="h-6 w-6" />}
@@ -40,9 +40,9 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
               {/* Cambiado a /home por defecto para alumnos, y movido el comentario */}
               <Link
                 to={user && user.rol === 'profesor' ? '/control-panel' : (user ? '/home' : '/')}
-                className="text-2xl font-bold text-blue-500 hover:text-blue-300"
+                className="text-2xl font-extrabold text-white tracking-wide hover:scale-105 transition-transform duration-200 inline-block filter drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]"
               >
-                Frutos Para Cristo
+                🌳 Frutos Para Cristo
               </Link>
             </div>
 
@@ -53,7 +53,7 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
                   {/* Enlaces comunes a ambos roles */}
                   <Link
                     to="/home"
-                    className="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                    className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
                   >
                     <FaHome className="inline-block mr-2" /> Inicio
                   </Link>
@@ -61,23 +61,35 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
                     <>
                       <Link
                         to="/tree"
-                        className="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                        className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
                       >
                         <FaTree className="inline-block mr-2" /> Mi Árbol
                       </Link>
                       {/* NUEVO ENLACE PARA LA MASCOTA */}
                       <Link
                         to="/pet-screen"
-                        className="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                        className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
                       >
                         <FaPaw className="inline-block mr-2" /> Mi Mascota
+                      </Link>
+                      <Link
+                        to="/minijuegos"
+                        className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
+                      >
+                        <FaGamepad className="inline-block mr-2" /> Minijuegos
+                      </Link>
+                      <Link
+                        to="/tienda"
+                        className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
+                      >
+                        <FaStore className="inline-block mr-2" /> Tienda
                       </Link>
                     </>
                   )}
                   {isProfesor && (
                     <Link
                       to="/control-panel"
-                      className="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                      className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
                     >
                       <FaHome className="inline-block mr-2" /> Panel de Control
                     </Link>
@@ -85,14 +97,14 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
                   {isProfesor && (
                     <Link
                       to="/alumnos"
-                      className="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                      className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
                     >
                       <FaList className="inline-block mr-2" /> Lista de Alumnos
                     </Link>
                   )}
                   <Link
                     to="/profile"
-                    className="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                    className="text-white hover:bg-white hover:text-indigo-600 px-3 py-2 rounded-2xl text-lg font-semibold transition-all duration-200 hover:scale-105 active:scale-95 inline-block"
                   >
                     <FaUserCircle className="inline-block mr-2" /> Perfil
                   </Link>
@@ -105,18 +117,18 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
 
         {/* Menú en pantallas pequeñas (desplegable) */}
         {user && user.token && ( // Solo muestra el menú móvil si hay un token
-          <div className={`${isOpen ? "block" : "hidden"} sm:hidden`}>
-            <div className="px-2 pt-2 pb-3 space-y-1">
+          <div className={`${isOpen ? "block" : "hidden"} sm:hidden pb-3`}>
+            <div className="px-2 pt-2 pb-3 space-y-2">
               <Link
                 to="/home"
-                className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
                 onClick={toggleMenu}
               >
                 <FaHome className="inline-block mr-2" /> Inicio
               </Link>
               <Link
                 to="/profile"
-                className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
                 onClick={toggleMenu}
               >
                 <FaUserCircle className="inline-block mr-2" /> Perfil
@@ -125,7 +137,7 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
                 <>
                   <Link
                     to="/tree"
-                    className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                    className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
                     onClick={toggleMenu}
                   >
                     <FaTree className="inline-block mr-2" /> Mi Árbol
@@ -133,17 +145,31 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
                   {/* NUEVO ENLACE PARA LA MASCOTA */}
                   <Link
                     to="/pet-screen"
-                    className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                    className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
                     onClick={toggleMenu}
                   >
                     <FaPaw className="inline-block mr-2" /> Mi Mascota
+                  </Link>
+                  <Link
+                    to="/minijuegos"
+                    className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
+                    onClick={toggleMenu}
+                  >
+                    <FaGamepad className="inline-block mr-2" /> Minijuegos
+                  </Link>
+                  <Link
+                    to="/tienda"
+                    className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
+                    onClick={toggleMenu}
+                  >
+                    <FaStore className="inline-block mr-2" /> Tienda
                   </Link>
                 </>
               )}
               {isProfesor && (
                 <Link
                   to="/control-panel"
-                  className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                  className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
                   onClick={toggleMenu}
                 >
                   <FaHome className="inline-block mr-2" /> Panel de Control
@@ -152,7 +178,7 @@ const Navbar = ({ user }) => { // onLogout eliminado de las props
               {isProfesor && (
                 <Link
                   to="/alumnos"
-                  className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-lg font-medium transition duration-300"
+                  className="text-white hover:bg-white hover:text-indigo-600 block px-3 py-2 rounded-xl text-lg font-semibold transition-all duration-200"
                   onClick={toggleMenu}
                 >
                   <FaHome className="inline-block mr-2" /> Alumnos
