@@ -596,13 +596,13 @@ const HomePage = ({ makeAuthenticatedRequest }) => {
               <Link to="/minijuegos" className="quick-card card-games">
                 <span className="quick-icon">🎮</span>
                 <span className="quick-title">Minijuegos</span>
-                <span className="quick-desc">Juega y gana monedas para la tienda.</span>
+                <span className="quick-desc">Juega y gana cristo monedas para la tienda.</span>
               </Link>
 
               <Link to="/tienda" className="quick-card card-store">
                 <span className="quick-icon">🛒</span>
                 <span className="quick-title">Tienda</span>
-                <span className="quick-desc">Canjea tus monedas por accesorios.</span>
+                <span className="quick-desc">Canjea tus cristo monedas por accesorios.</span>
               </Link>
 
             </div>

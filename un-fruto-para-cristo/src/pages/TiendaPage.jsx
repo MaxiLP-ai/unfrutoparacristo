@@ -205,7 +205,7 @@ const TiendaPage = ({ makeAuthenticatedRequest }) => {
       Swal.fire({
         icon: 'error',
         title: 'Oops...',
-        text: 'No tienes monedas suficientes. ¡Juega a los minijuegos para ganar más!',
+        text: 'No tienes cristo monedas suficientes. ¡Juega a los minijuegos para ganar más!',
         confirmButtonColor: '#d33',
         customClass: { popup: 'cartoon-border rounded-3xl' }
       });
@@ -214,7 +214,7 @@ const TiendaPage = ({ makeAuthenticatedRequest }) => {
 
     Swal.fire({
       title: '¿Confirmar compra?',
-      text: `¿Quieres canjear ${item.costo} monedas por "${item.nombre}"?`,
+      text: `¿Quieres canjear ${item.costo} cristo monedas por "${item.nombre}"?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, comprar',
@@ -308,12 +308,12 @@ const TiendaPage = ({ makeAuthenticatedRequest }) => {
             <span className="text-4xl">🎁</span>
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-wide">Mercado de Recompensas</h1>
-              <p className="text-slate-600 font-semibold text-sm">Canjea tus monedas ganadas por fabulosas sorpresas.</p>
+              <p className="text-slate-600 font-semibold text-sm">Canjea tus cristo monedas ganadas por fabulosas sorpresas.</p>
             </div>
           </div>
           <div className="bg-yellow-300 border-4 border-slate-800 rounded-2xl px-5 py-2 font-bold text-xl shadow-[3px_3px_0px_0px_#1e293b] flex items-center gap-2">
             <span>🪙</span>
-            <span>{coins} Monedas</span>
+            <span>{coins} Cristo Monedas</span>
           </div>
         </div>
 
@@ -344,7 +344,7 @@ const TiendaPage = ({ makeAuthenticatedRequest }) => {
                       onClick={() => handleComprar(item)}
                       className="w-full bubbly-button bg-yellow-300 py-2.5 text-slate-900 font-bold flex items-center justify-center gap-2"
                     >
-                      <FaCoins /> {item.costo} Monedas
+                      <FaCoins /> {item.costo} Cristo Monedas
                     </button>
                   ) : hasPurchased ? (
                     // Skins/fondos compradas se pueden equipar o desequipar
@@ -372,7 +372,7 @@ const TiendaPage = ({ makeAuthenticatedRequest }) => {
                       onClick={() => handleComprar(item)}
                       className="w-full bubbly-button bg-yellow-300 py-2.5 text-slate-900 font-bold flex items-center justify-center gap-2"
                     >
-                      <FaCoins /> {item.costo} Monedas
+                      <FaCoins /> {item.costo} Cristo Monedas
                     </button>
                   )}
                 </div>

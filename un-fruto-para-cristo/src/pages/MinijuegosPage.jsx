@@ -74,12 +74,12 @@ export default function MinijuegosPage({ makeAuthenticatedRequest }) {
             <span className="text-4xl select-none">🎮</span>
             <div className="text-left">
               <h1 className="text-2xl font-black text-slate-900 tracking-wide uppercase">Zona de Minijuegos</h1>
-              <p className="text-slate-500 font-bold text-xs">¡Juega, diviértete y gana monedas para la tienda!</p>
+              <p className="text-slate-500 font-bold text-xs">¡Juega, diviértete y gana cristo monedas para la tienda!</p>
             </div>
           </div>
           <div className="bg-yellow-300 border-4 border-slate-900 rounded-2xl px-5 py-2 font-black text-lg shadow-[3px_3px_0px_0px_#0f172a] flex items-center gap-2">
             <span>🪙</span>
-            <span>{coins} Monedas</span>
+            <span>{coins} Cristo Monedas</span>
           </div>
         </div>
 
@@ -421,7 +421,7 @@ const FruitCatcherGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coinsEarned).then((monedas) => {
         Swal.fire({
           title: '¡Fin de la cosecha! 🧺',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Atrapaste ${finalScore} frutas.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Atrapaste ${finalScore} frutas.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Aceptar',
           confirmButtonColor: '#6366f1'
         });
@@ -523,7 +523,7 @@ const MemoryGame = ({ onBack, onSaveCoins }) => {
               onSaveCoins(reward).then((monedas) => {
                 Swal.fire({
                   title: '¡Felicidades! 🎉🧠',
-                  html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Parejas resueltas en <b>${moves} movimientos</b>.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+                  html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Parejas resueltas en <b>${moves} movimientos</b>.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
                   confirmButtonText: 'Excelente',
                   confirmButtonColor: '#10b981'
                 });
@@ -607,7 +607,7 @@ const TriviaGame = ({ onBack, onSaveCoins }) => {
         onSaveCoins(finalAnswers).then((monedas) => {
           Swal.fire({
             title: '¡Trivia Finalizada! 📖✨',
-            html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Aciertos: ${finalAnswers} de ${TRIVIA_QUESTIONS.length} preguntas.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+            html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Aciertos: ${finalAnswers} de ${TRIVIA_QUESTIONS.length} preguntas.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
             confirmButtonText: 'Súper',
             confirmButtonColor: '#6366f1'
           });
@@ -800,7 +800,7 @@ const JumpingFaithGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coins).then((monedas) => {
         Swal.fire({
           title: '¡Fin de la carrera! 🐑💨',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Esquivaste ${finalScore} obstáculos.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Esquivaste ${finalScore} obstáculos.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Genial',
           confirmButtonColor: '#10b981'
         });
@@ -990,7 +990,7 @@ const FlappyDoveGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coins).then((monedas) => {
         Swal.fire({
           title: '¡Vuelo finalizado! 🕊️🍂',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Superaste ${finalScore} lianas.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Superaste ${finalScore} lianas.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Aceptar',
           confirmButtonColor: '#6366f1'
         });
@@ -1235,7 +1235,7 @@ const DavidSlingGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coins).then((monedas) => {
         Swal.fire({
           title: won ? '¡Victoria! Goliat ha caído 🪨👑' : '¡Fin de la batalla! ⚔️',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Puntos logrados: ${finalScore}<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Puntos logrados: ${finalScore}<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Aceptar',
           confirmButtonColor: '#6366f1'
         });
@@ -1513,7 +1513,7 @@ const JerichoWallBreakerGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coins).then((monedas) => {
         Swal.fire({
           title: won ? '¡Murallas derribadas! 🎺🧱' : '¡Fin del juego! 🧱',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Derribaste muros sumando ${finalScore} pts.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Derribaste muros sumando ${finalScore} pts.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Genial',
           confirmButtonColor: '#6366f1'
         });
@@ -1704,7 +1704,7 @@ const SerpienteBronceGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coins).then((monedas) => {
         Swal.fire({
           title: '¡Fin de la caminata! 🏜️🐍',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Escudos recolectados: ${finalScore / 10}.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Escudos recolectados: ${finalScore / 10}.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Aceptar',
           confirmButtonColor: '#6366f1'
         });
@@ -1822,7 +1822,7 @@ const TalentsMathQuizGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coins).then((monedas) => {
         Swal.fire({
           title: '¡Cálculo Finalizado! 🧮',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Obtuviste ${score + (opt === correctAnswer ? 10 : 0)} puntos.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Obtuviste ${score + (opt === correctAnswer ? 10 : 0)} puntos.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Amén',
           confirmButtonColor: '#6366f1'
         });
@@ -1927,7 +1927,7 @@ const SimonSaysTempleGame = ({ onBack, onSaveCoins }) => {
       onSaveCoins(coins).then((monedas) => {
         Swal.fire({
           title: '¡Velas apagadas! 🕯️🍂',
-          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Iluminaste ${score} velas seguidas.<br/>¡Ganaste <b>🪙 ${monedas} monedas</b>!</div>`,
+          html: `<div style="font-family:'Fredoka'; font-size:1.15rem;">Iluminaste ${score} velas seguidas.<br/>¡Ganaste <b>🪙 ${monedas} cristo monedas</b>!</div>`,
           confirmButtonText: 'Genial',
           confirmButtonColor: '#6366f1'
         });

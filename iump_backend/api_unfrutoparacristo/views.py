@@ -1653,6 +1653,15 @@ class SuperAdminToolsView(APIView):
         total_monedas = sum(a.alumno_monedas for a in alumnos)
         promedio_monedas = round(total_monedas / total_alumnos) if total_alumnos > 0 else 0
         
+        alumnos_list = Alumno.objects.select_related('alumno_usuario', 'alumno_usuario__usuario_clase_actual').all()
+        alumnos_data = [{
+            'id': a.id,
+            'nombre': a.alumno_usuario.usuario_nombre_completo or a.alumno_usuario.username,
+            'clase_nombre': a.alumno_usuario.usuario_clase_actual.clase_nombre if a.alumno_usuario.usuario_clase_actual else 'Sin Asignar',
+            'clase_id': a.alumno_usuario.usuario_clase_actual.clase_id if a.alumno_usuario.usuario_clase_actual else None,
+            'monedas': a.alumno_monedas
+        } for a in alumnos_list]
+        
         return Response({
             'total_usuarios': total_usuarios,
             'total_alumnos': total_alumnos,
@@ -1660,6 +1669,7 @@ class SuperAdminToolsView(APIView):
             'total_clases': total_clases,
             'promedio_monedas': promedio_monedas,
             'total_monedas_sistema': total_monedas,
+            'alumnos': alumnos_data
         }, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -1669,13 +1679,21 @@ class SuperAdminToolsView(APIView):
         action = request.data.get('action')
         if action == 'award_coins':
             clase_id = request.data.get('clase_id')
+            alumno_id = request.data.get('alumno_id')
             cantidad = int(request.data.get('cantidad', 0))
             motivo = request.data.get('motivo', 'Recompensa especial del administrador')
             
             if cantidad <= 0:
-                return Response({'detail': 'La cantidad de monedas debe ser mayor a 0.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'detail': 'La cantidad de cristo monedas debe ser mayor a 0.'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            if not clase_id or clase_id == 'all':
+            if alumno_id:
+                try:
+                    alumnos_a_premiar = Alumno.objects.filter(pk=alumno_id)
+                    if not alumnos_a_premiar.exists():
+                        return Response({'detail': 'El alumno especificado no existe.'}, status=status.HTTP_404_NOT_FOUND)
+                except Exception:
+                    return Response({'detail': 'ID de alumno no válido.'}, status=status.HTTP_400_BAD_REQUEST)
+            elif not clase_id or clase_id == 'all':
                 alumnos_a_premiar = Alumno.objects.all()
             else:
                 try:
@@ -1691,8 +1709,15 @@ class SuperAdminToolsView(APIView):
                     alumno.save()
                     total_premiados += 1
                     
+            destinatario = "todos los alumnos"
+            if alumno_id:
+                alumno_obj = alumnos_a_premiar.first()
+                destinatario = f"el alumno {alumno_obj.alumno_usuario.usuario_nombre_completo or alumno_obj.alumno_usuario.username}"
+            elif clase_id and clase_id != 'all':
+                destinatario = f"los alumnos de la clase {clase.clase_nombre}"
+                
             return Response({
-                'detail': f'¡Se han otorgado {cantidad} monedas a {total_premiados} alumnos con éxito! 🪙',
+                'detail': f'¡Se han otorgado {cantidad} cristo monedas a {destinatario} con éxito! 🪙',
                 'total_premiados': total_premiados
             }, status=status.HTTP_200_OK)
             

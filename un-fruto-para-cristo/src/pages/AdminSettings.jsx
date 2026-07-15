@@ -11,6 +11,8 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
 
   // Form states
   const [selectedClass, setSelectedClass] = useState('all');
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState('all');
   const [rewardAmount, setRewardAmount] = useState(100);
   const [customAmount, setCustomAmount] = useState('');
   const [reason, setReason] = useState('Recompensa especial del súper administrador');
@@ -28,6 +30,7 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
         const clasesData = await clasesRes.json();
         setStats(statsData);
         setClasses(clasesData);
+        setStudents(statsData.alumnos || []);
       } else {
         throw new Error('Fallo al obtener datos administrativos del backend.');
       }
@@ -58,7 +61,7 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
     e.preventDefault();
     const finalAmount = customAmount ? Number(customAmount) : rewardAmount;
     if (finalAmount <= 0) {
-      Swal.fire('Cantidad Inválida', 'Por favor ingresa una cantidad de monedas mayor a 0.', 'warning');
+      Swal.fire('Cantidad Inválida', 'Por favor ingresa una cantidad de cristo monedas mayor a 0.', 'warning');
       return;
     }
 
@@ -69,6 +72,7 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
         body: JSON.stringify({
           action: 'award_coins',
           clase_id: selectedClass,
+          alumno_id: selectedStudent !== 'all' ? selectedStudent : null,
           cantidad: finalAmount,
           motivo: reason
         })
@@ -78,10 +82,12 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
         const data = await res.json();
         Swal.fire({
           title: '✨ ¡Premio Otorgado! ✨',
-          text: data.detail || `Se asignaron ${finalAmount} monedas correctamente.`,
+          text: data.detail || `Se asignaron ${finalAmount} cristo monedas correctamente.`,
           icon: 'success',
           confirmButtonColor: '#6366f1'
         });
+        // Reset specific student selection
+        setSelectedStudent('all');
         // Recargar datos
         fetchAdminData();
       } else {
@@ -160,7 +166,7 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
 
             <div className="bg-white border-3 border-slate-900 p-4 rounded-2xl shadow-[3px_3px_0px_0px_#0f172a]">
               <Coins className="text-indigo-500 mb-2" size={24} />
-              <p className="text-[10px] font-black text-slate-400 uppercase">Promedio Monedas</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase">Promedio Cristo Monedas</p>
               <p className="text-2xl font-black text-slate-800">{stats?.promedio_monedas} 🪙</p>
             </div>
           </section>
@@ -168,32 +174,55 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
           {/* Formulario de Recompensas Masivas */}
           <section className="chunky-admin-card p-6 md:p-8 mb-8">
             <h2 className="text-2xl font-black text-slate-800 mb-2 flex items-center gap-2">
-              🪙 Otorgar Monedas en Lote
+              🪙 Otorgar Cristo Monedas
             </h2>
             <p className="text-slate-500 text-xs font-bold mb-6">
-              Elige una clase o premia a todos los alumnos a la vez para motivarlos a aprender.
+              Elige una clase completa o premia a un alumno específico de la congregación para motivarlo en su fe.
             </p>
 
             <form onSubmit={handleGrantCoins} className="space-y-5">
               
               {/* Clase a Recompensar */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Destinatarios (Clase)</label>
-                <select 
-                  value={selectedClass} 
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-full p-3 border-3 border-slate-800 rounded-xl font-bold text-slate-800 focus:outline-none bg-slate-50"
-                >
-                  <option value="all">⭐ Todos los Alumnos del Sistema</option>
-                  {classes.map(c => (
-                    <option key={c.clase_id} value={c.clase_id}>🎒 {c.clase_nombre}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Destinatarios (Clase)</label>
+                  <select 
+                    value={selectedClass} 
+                    onChange={(e) => {
+                      setSelectedClass(e.target.value);
+                      setSelectedStudent('all'); // Reset student selection when class changes
+                    }}
+                    className="w-full p-3 border-3 border-slate-800 rounded-xl font-bold text-slate-800 focus:outline-none bg-slate-50"
+                  >
+                    <option value="all">⭐ Todos los Alumnos del Sistema</option>
+                    {classes.map(c => (
+                      <option key={c.clase_id} value={c.clase_id}>🎒 {c.clase_nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Alumno Específico */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">Alumno Específico (Opcional)</label>
+                  <select 
+                    value={selectedStudent} 
+                    onChange={(e) => setSelectedStudent(e.target.value)}
+                    className="w-full p-3 border-3 border-slate-800 rounded-xl font-bold text-slate-800 focus:outline-none bg-slate-50"
+                  >
+                    <option value="all">👥 Todos los Alumnos (Sin filtrar específico)</option>
+                    {students
+                      .filter(s => selectedClass === 'all' || String(s.clase_id) === String(selectedClass))
+                      .map(s => (
+                        <option key={s.id} value={s.id}>👤 {s.nombre} ({s.clase_nombre}) — {s.monedas} 🪙</option>
+                      ))
+                    }
+                  </select>
+                </div>
               </div>
 
               {/* Cantidad de Monedas */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Cantidad de Monedas</label>
+                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Cantidad de Cristo Monedas</label>
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   {[50, 100, 200, 500].map(amt => (
                     <button
@@ -241,7 +270,7 @@ export default function AdminSettings({ makeAuthenticatedRequest }) {
                   type="submit"
                   className="w-full bubbly-button bg-indigo-400 hover:bg-indigo-500 border-slate-900 text-slate-900 py-3.5 font-extrabold text-sm shadow-[4px_4px_0px_0px_#0f172a] flex items-center justify-center gap-2 active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#0f172a] transition-all"
                 >
-                  <Sparkles size={16} /> Otorga Monedas a la Clase
+                  <Sparkles size={16} /> Otorgar Cristo Monedas
                 </button>
               </div>
 
